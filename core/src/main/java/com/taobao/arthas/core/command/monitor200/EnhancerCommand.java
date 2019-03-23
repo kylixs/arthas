@@ -2,8 +2,7 @@ package com.taobao.arthas.core.command.monitor200;
 
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 import com.taobao.arthas.core.advisor.AdviceListener;
 import com.taobao.arthas.core.advisor.Enhancer;
@@ -18,6 +17,8 @@ import com.taobao.arthas.core.shell.session.Session;
 import com.taobao.arthas.core.util.Constants;
 import com.taobao.arthas.core.util.LogUtil;
 import com.taobao.arthas.core.util.affect.EnhancerAffect;
+import com.taobao.arthas.core.util.collection.MethodCollector;
+import com.taobao.arthas.core.util.matcher.CollectionMatcher;
 import com.taobao.arthas.core.util.matcher.Matcher;
 import com.taobao.middleware.logger.Logger;
 
@@ -121,6 +122,18 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
                               + "4. visit https://github.com/alibaba/arthas/issues/47 for more details.\n");
                 process.end();
                 return;
+            }
+
+
+            MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
+            MethodCollector visitedMethodCollector = effect.getVisitedMethodCollector();
+            Collection<String> referencedClassNames = new HashSet<String>();
+            CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodMatcher(enhancedMethodCollector, referencedClassNames, true);
+            if (referencedClassNames.size() > 0){
+                process.write(effect + "\n");
+                Matcher newClassNameMatcher = new CollectionMatcher(referencedClassNames);
+                effect = Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
+                        skipJDKTrace, newClassNameMatcher, newMethodNameMatcher);
             }
 
             // 这里做个补偿,如果在enhance期间,unLock被调用了,则补偿性放弃

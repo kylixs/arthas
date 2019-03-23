@@ -1,10 +1,10 @@
 package com.taobao.arthas.core.util.affect;
 
 import com.taobao.arthas.core.GlobalOptions;
+import com.taobao.arthas.core.util.collection.MethodCollector;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.String.format;
@@ -23,6 +23,9 @@ public final class EnhancerAffect extends Affect {
      * dumpClass的文件存放集合
      */
     private final Collection<File> classDumpFiles = new ArrayList<File>();
+
+    private MethodCollector enhancedMethodCollector = new MethodCollector();
+    private MethodCollector visitedMethodCollector = new MethodCollector();
 
     public EnhancerAffect() {
 
@@ -78,6 +81,32 @@ public final class EnhancerAffect extends Affect {
      */
     public Collection<File> getClassDumpFiles() {
         return classDumpFiles;
+    }
+
+    public MethodCollector getEnhancedMethodCollector() {
+        return enhancedMethodCollector;
+    }
+
+    public MethodCollector getVisitedMethodCollector() {
+        return visitedMethodCollector;
+    }
+
+    /**
+     * 记录访问的类方法，提供给后面级联增强使用
+     * @param className
+     * @param methodName
+     */
+    public void addVisitMethod(String className, String methodName) {
+        visitedMethodCollector.addMethod(className, methodName);
+    }
+
+    /**
+     * 记录以处理的类方法，后面不需要再增强
+     * @param className
+     * @param methodName
+     */
+    public void addEnhancedMethod(String className, String methodName) {
+        enhancedMethodCollector.addMethod(className, methodName);
     }
 
     @Override

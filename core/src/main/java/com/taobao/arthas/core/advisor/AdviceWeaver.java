@@ -409,6 +409,7 @@ public class AdviceWeaver extends ClassVisitor implements Opcodes {
 
         // 编织方法计数
         affect.mCnt(1);
+        affect.addEnhancedMethod(this.className, name);
 
         return new AdviceAdapter(Opcodes.ASM7, new JSRInlinerAdapter(mv, access, name, desc, signature, exceptions), access, name, desc) {
 
@@ -932,6 +933,7 @@ public class AdviceWeaver extends ClassVisitor implements Opcodes {
                     return;
                 }
 
+                affect.addVisitMethod(owner, name);
                 // 方法调用前通知
                 tracing(KEY_ARTHAS_ADVICE_BEFORE_INVOKING_METHOD, owner, name, desc);
 
