@@ -4,6 +4,7 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.util.*;
 
+import com.taobao.arthas.core.GlobalOptions;
 import com.taobao.arthas.core.advisor.AdviceListener;
 import com.taobao.arthas.core.advisor.Enhancer;
 import com.taobao.arthas.core.advisor.InvokeTraceable;
@@ -20,6 +21,7 @@ import com.taobao.arthas.core.util.affect.EnhancerAffect;
 import com.taobao.arthas.core.util.collection.MethodCollector;
 import com.taobao.arthas.core.util.matcher.CollectionMatcher;
 import com.taobao.arthas.core.util.matcher.Matcher;
+import com.taobao.arthas.core.util.matcher.MethodMatcher;
 import com.taobao.middleware.logger.Logger;
 
 /**
@@ -33,7 +35,7 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
                                                        "{params,returnObj}", "params[0]" };
 
     protected Matcher classNameMatcher;
-    protected Matcher methodNameMatcher;
+    protected MethodMatcher methodNameMatcher;
 
     /**
      * 类名匹配
@@ -47,7 +49,7 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
      *
      * @return 获取方法名匹配
      */
-    protected abstract Matcher getMethodNameMatcher();
+    protected abstract MethodMatcher getMethodNameMatcher();
 
     /**
      * 获取监听器
@@ -124,14 +126,21 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
                 return;
             }
 
+            MethodCollector globalEnhancedMethodCollector = new MethodCollector();
 
-            MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
-            MethodCollector visitedMethodCollector = effect.getVisitedMethodCollector();
-            Collection<String> referencedClassNames = new HashSet<String>();
-            CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodMatcher(enhancedMethodCollector, referencedClassNames, true);
-            if (referencedClassNames.size() > 0){
+            int depth = 1;
+            int maxDepth = Math.min(GlobalOptions.traceDepth, 20);
+            while(++depth <= maxDepth){
+                MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
+                globalEnhancedMethodCollector.merge(enhancedMethodCollector);
+                MethodCollector visitedMethodCollector = effect.getVisitedMethodCollector();
+                CollectionMatcher newClassNameMatcher = visitedMethodCollector.getClassNameMatcher(globalEnhancedMethodCollector, true);
+                CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, true);
+                if (newMethodNameMatcher.size() == 0){
+                    break;
+                }
+
                 process.write(effect + "\n");
-                Matcher newClassNameMatcher = new CollectionMatcher(referencedClassNames);
                 effect = Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
                         skipJDKTrace, newClassNameMatcher, newMethodNameMatcher);
             }

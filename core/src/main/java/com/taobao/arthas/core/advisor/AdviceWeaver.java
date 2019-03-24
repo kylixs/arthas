@@ -1,12 +1,12 @@
 package com.taobao.arthas.core.advisor;
 
 import com.taobao.arthas.core.GlobalOptions;
-import com.taobao.arthas.core.util.matcher.Matcher;
 import com.taobao.arthas.core.util.*;
 import com.taobao.arthas.core.util.affect.EnhancerAffect;
 import com.taobao.arthas.core.util.collection.GaStack;
 import com.taobao.arthas.core.util.collection.ThreadUnsafeFixGaStack;
 import com.taobao.arthas.core.util.collection.ThreadUnsafeGaStack;
+import com.taobao.arthas.core.util.matcher.MethodMatcher;
 import com.taobao.middleware.logger.Logger;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.AdviceAdapter;
@@ -339,7 +339,8 @@ public class AdviceWeaver extends ClassVisitor implements Opcodes {
     private final boolean skipJDKTrace;
     private final String className;
     private String superName;
-    private final Matcher matcher;
+    private final String[] interfaces;
+    private final MethodMatcher matcher;
     private final EnhancerAffect affect;
 
 
@@ -354,12 +355,13 @@ public class AdviceWeaver extends ClassVisitor implements Opcodes {
      * @param affect    影响计数
      * @param cv        ClassVisitor for ASM
      */
-    public AdviceWeaver(int adviceId, boolean isTracing, boolean skipJDKTrace, String className, Matcher matcher, EnhancerAffect affect, ClassVisitor cv) {
+    public AdviceWeaver(int adviceId, boolean isTracing, boolean skipJDKTrace, String className, String[] interfaces, MethodMatcher matcher, EnhancerAffect affect, ClassVisitor cv) {
         super(Opcodes.ASM7, cv);
         this.adviceId = adviceId;
         this.isTracing = isTracing;
         this.skipJDKTrace = skipJDKTrace;
         this.className = className;
+        this.interfaces = interfaces;
         this.matcher = matcher;
         this.affect = affect;
     }
@@ -389,8 +391,22 @@ public class AdviceWeaver extends ClassVisitor implements Opcodes {
     private boolean isIgnore(MethodVisitor mv, int access, String methodName) {
         return null == mv
                 || isAbstract(access)
-                || !matcher.matching(methodName)
+                || !matchingMethod(methodName)
                 || ArthasCheckUtils.isEquals(methodName, "<clinit>");
+    }
+
+    private boolean matchingMethod(String methodName) {
+        if(matcher.matching(className, methodName)) {
+            return true;
+        }
+        if(interfaces != null && interfaces.length > 0){
+            for (String anInterface : interfaces) {
+                if(matcher.matching(anInterface, methodName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override

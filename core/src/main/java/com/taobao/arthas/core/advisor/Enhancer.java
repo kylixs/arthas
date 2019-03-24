@@ -8,6 +8,7 @@ import com.taobao.arthas.core.util.matcher.Matcher;
 import com.taobao.arthas.core.util.SearchUtils;
 import com.taobao.arthas.core.util.affect.EnhancerAffect;
 
+import com.taobao.arthas.core.util.matcher.MethodMatcher;
 import com.taobao.arthas.core.util.reflect.FieldUtils;
 import com.taobao.middleware.logger.Logger;
 import org.objectweb.asm.ClassReader;
@@ -41,7 +42,7 @@ public class Enhancer implements ClassFileTransformer {
     private final boolean isTracing;
     private final boolean skipJDKTrace;
     private final Set<Class<?>> matchingClasses;
-    private final Matcher methodNameMatcher;
+    private final MethodMatcher methodNameMatcher;
     private final EnhancerAffect affect;
 
     // 类-字节码缓存
@@ -59,7 +60,7 @@ public class Enhancer implements ClassFileTransformer {
                      boolean isTracing,
                      boolean skipJDKTrace,
                      Set<Class<?>> matchingClasses,
-                     Matcher methodNameMatcher,
+                     MethodMatcher methodNameMatcher,
                      EnhancerAffect affect) {
         this.adviceId = adviceId;
         this.isTracing = isTracing;
@@ -157,7 +158,7 @@ public class Enhancer implements ClassFileTransformer {
             };
 
             // 生成增强字节码
-            cr.accept(new AdviceWeaver(adviceId, isTracing, skipJDKTrace, cr.getClassName(), methodNameMatcher, affect,
+            cr.accept(new AdviceWeaver(adviceId, isTracing, skipJDKTrace, cr.getClassName(), cr.getInterfaces(), methodNameMatcher, affect,
                             cw), EXPAND_FRAMES);
             final byte[] enhanceClassByteArray = cw.toByteArray();
 
@@ -276,7 +277,7 @@ public class Enhancer implements ClassFileTransformer {
             final boolean isTracing,
             final boolean skipJDKTrace,
             final Matcher classNameMatcher,
-            final Matcher methodNameMatcher) throws UnmodifiableClassException {
+            final MethodMatcher methodNameMatcher) throws UnmodifiableClassException {
 
         final EnhancerAffect affect = new EnhancerAffect();
 

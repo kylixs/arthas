@@ -3,15 +3,12 @@ package com.taobao.arthas.core.util.matcher;
 import java.util.Collection;
 import java.util.HashSet;
 
-public class CollectionMatcher implements Matcher<String> {
+public class CollectionMatcher implements Matcher<String>, MethodMatcher<String> {
 
     private Collection<String> values;
 
     public CollectionMatcher(Collection<String> values) {
-        this.values = new HashSet<String>();
-        for (String value : values) {
-            this.values.add(value.replace('/','.'));
-        }
+        this.values = new HashSet<String>(values);
     }
 
     public CollectionMatcher() {
@@ -27,4 +24,8 @@ public class CollectionMatcher implements Matcher<String> {
         return values.size();
     }
 
+    @Override
+    public boolean matching(String className, String methodName) {
+        return matching(className+":"+methodName);
+    }
 }

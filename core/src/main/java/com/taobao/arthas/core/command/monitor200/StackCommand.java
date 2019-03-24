@@ -5,6 +5,7 @@ import com.taobao.arthas.core.command.Constants;
 import com.taobao.arthas.core.shell.command.CommandProcess;
 import com.taobao.arthas.core.util.SearchUtils;
 import com.taobao.arthas.core.util.matcher.Matcher;
+import com.taobao.arthas.core.util.matcher.MethodMatcher;
 import com.taobao.middleware.cli.annotations.Argument;
 import com.taobao.middleware.cli.annotations.Description;
 import com.taobao.middleware.cli.annotations.Name;
@@ -93,7 +94,7 @@ public class StackCommand extends EnhancerCommand {
     }
 
     @Override
-    protected Matcher getMethodNameMatcher() {
+    protected MethodMatcher getMethodNameMatcher() {
         if (methodNameMatcher == null) {
             methodNameMatcher = SearchUtils.classNameMatcher(getMethodPattern(), isRegEx());
         }

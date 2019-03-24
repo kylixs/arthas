@@ -2,6 +2,7 @@ package com.taobao.arthas.core.util;
 
 import com.taobao.arthas.core.GlobalOptions;
 import com.taobao.arthas.core.util.matcher.Matcher;
+import com.taobao.arthas.core.util.matcher.MethodMatcher;
 import com.taobao.arthas.core.util.matcher.RegexMatcher;
 import com.taobao.arthas.core.util.matcher.WildcardMatcher;
 
@@ -86,7 +87,7 @@ public class SearchUtils {
         return result;
     }
 
-    public static Matcher<String> classNameMatcher(String classPattern, boolean isRegEx) {
+    public static MethodMatcher classNameMatcher(String classPattern, boolean isRegEx) {
         if (StringUtils.isEmpty(classPattern)) {
             classPattern = isRegEx ? ".*" : "*";
         }

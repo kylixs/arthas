@@ -4,6 +4,7 @@ import com.taobao.arthas.core.advisor.AdviceListener;
 import com.taobao.arthas.core.command.ScriptSupportCommand;
 import com.taobao.arthas.core.shell.command.CommandProcess;
 import com.taobao.arthas.core.util.matcher.Matcher;
+import com.taobao.arthas.core.util.matcher.MethodMatcher;
 import com.taobao.middleware.cli.annotations.Argument;
 import com.taobao.middleware.cli.annotations.Description;
 import com.taobao.middleware.cli.annotations.Hidden;
@@ -80,7 +81,7 @@ public class GroovyScriptCommand extends EnhancerCommand implements ScriptSuppor
     }
 
     @Override
-    protected Matcher getMethodNameMatcher() {
+    protected MethodMatcher getMethodNameMatcher() {
         throw new UnsupportedOperationException("groovy command is not supported yet!");
     }
 

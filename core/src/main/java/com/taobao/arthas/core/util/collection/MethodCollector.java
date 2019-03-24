@@ -19,6 +19,18 @@ public class MethodCollector {
         }
     }
 
+    public void addMethods(String className, List<String> methodNames) {
+        for (String methodName : methodNames) {
+            this.addMethod(className, methodName);
+        }
+    }
+
+    public void merge(MethodCollector target) {
+        for (Map.Entry<String, List<String>> entry : target.classMethodMap.entrySet()) {
+            this.addMethods(entry.getKey(), entry.getValue());
+        }
+    }
+
     public boolean contains(String className, String methodName) {
         List<String> methods = classMethodMap.get(className);
         if(methods != null){
@@ -31,25 +43,40 @@ public class MethodCollector {
         return classMethodMap.keySet();
     }
 
-    public CollectionMatcher getMethodMatcher(MethodCollector filteredCollector, Collection<String> referencedClassNames, boolean skipJdkClass) {
-        List<String> methodNames = new ArrayList<String>(16);
+    public CollectionMatcher getClassNameMatcher(MethodCollector filteredCollector, boolean skipJdkClass ){
+        Collection<String> classNames = new HashSet<String>(16);
         for (Map.Entry<String, List<String>> entry : classMethodMap.entrySet()) {
             String className = entry.getKey();
             if(skipJdkClass && className.startsWith("java/")){
                 continue;
             }
-            if(filteredCollector!=null) {
-                for (String name : entry.getValue()) {
-                    if(!filteredCollector.contains(className, name)){
-                        methodNames.add(name);
-                        referencedClassNames.add(className);
-                    }
+            for (String name : entry.getValue()) {
+                if(filteredCollector==null || !filteredCollector.contains(className, name)){
+                    classNames.add(toNormalClassName(className));
+                    break;
                 }
-            }else {
-                referencedClassNames.add(className);
-                methodNames.addAll(entry.getValue());
             }
         }
-        return new CollectionMatcher(methodNames);
+        return new CollectionMatcher(classNames);
+    }
+
+    private String toNormalClassName(String className) {
+        return className.replace('/','.');
+    }
+
+    public CollectionMatcher getMethodNameMatcher(MethodCollector filteredCollector, boolean skipJdkClass) {
+        Collection<String> fullyMethodNames = new HashSet<String>(16);
+        for (Map.Entry<String, List<String>> entry : classMethodMap.entrySet()) {
+            String className = entry.getKey();
+            if(skipJdkClass && className.startsWith("java/")){
+                continue;
+            }
+            for (String name : entry.getValue()) {
+                if(filteredCollector==null || !filteredCollector.contains(className, name)){
+                    fullyMethodNames.add(className+":"+name);
+                }
+            }
+        }
+        return new CollectionMatcher(fullyMethodNames);
     }
 }

@@ -14,6 +14,7 @@ import com.taobao.arthas.core.util.SearchUtils;
 import com.taobao.arthas.core.util.StringUtils;
 import com.taobao.arthas.core.util.affect.RowAffect;
 import com.taobao.arthas.core.util.matcher.Matcher;
+import com.taobao.arthas.core.util.matcher.MethodMatcher;
 import com.taobao.arthas.core.view.ObjectView;
 import com.taobao.middleware.cli.annotations.Description;
 import com.taobao.middleware.cli.annotations.Name;
@@ -300,7 +301,7 @@ public class TimeTunnelCommand extends EnhancerCommand {
     }
 
     @Override
-    protected Matcher getMethodNameMatcher() {
+    protected MethodMatcher getMethodNameMatcher() {
         if (methodNameMatcher == null) {
             methodNameMatcher = SearchUtils.classNameMatcher(getMethodPattern(), isRegEx());
         }
