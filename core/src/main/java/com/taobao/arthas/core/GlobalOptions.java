@@ -100,13 +100,14 @@ public class GlobalOptions {
     public static volatile String jobTimeout = "1d";
 
     /**
-     * trace方法深度
+     * trace输出top n行方法调用
      */
     @Option(level = 2,
-            name = "trace-depth",
-            summary = "Option to trace method depth",
-            description = "This option setting trace command max cascade method depth. The value range is [1-20]."
+            name = "trace-output-lines",
+            summary = "Option to trace output top n sub method call lines",
+            description = "This option setting trace command output top n lines. " +
+                    "The value -1 means full method call lines will be output. "
     )
-    public static volatile int traceDepth = 10;
+    public static volatile int traceOutputLines = 8;
 
 }
