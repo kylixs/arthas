@@ -225,6 +225,10 @@ public class TreeView implements View {
         return this;
     }
 
+    public String getTopTraceData() {
+        //treeView: thread info -> top method -> sub method ..
+        return root.children.get(0).data;
+    }
 
     /**
      * 树节点

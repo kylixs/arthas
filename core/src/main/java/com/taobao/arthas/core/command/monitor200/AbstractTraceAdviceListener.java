@@ -72,7 +72,7 @@ public class AbstractTraceAdviceListener extends ReflectAdviceListenerAdapter {
         double cost = threadLocalWatch.costInMillis();
         if (--threadBoundEntity.get().deep == 0) {
             try {
-                if (isConditionMet(command.getConditionExpress(), advice, cost)) {
+                if (isConditionMet(command.getConditionExpress(), advice, cost) && isTopTraceMethod()) {
                     // 满足输出条件
                     if (isLimitExceeded(command.getNumberOfLimit(), process.times().get())) {
                         // TODO: concurrency issue to abort process
@@ -92,5 +92,21 @@ public class AbstractTraceAdviceListener extends ReflectAdviceListenerAdapter {
                 threadBoundEntity.remove();
             }
         }
+    }
+
+    /**
+     * check if the first level trace method
+     * @return
+     */
+    private boolean isTopTraceMethod() {
+        String rootData = threadBoundEntity.get().view.getTopTraceData();
+        String[] strs = rootData.split(":");
+        String className = strs[0];
+        String methodName = strs[1].replaceAll("\\(\\)", "");
+        if (strs.length>=2 && command.getClassNameMatcher().matching(className) && command.getMethodNameMatcher().matching(methodName)){
+            return true;
+        }
+
+        return false;
     }
 }
