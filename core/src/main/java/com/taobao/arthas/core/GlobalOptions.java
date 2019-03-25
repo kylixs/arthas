@@ -100,14 +100,14 @@ public class GlobalOptions {
     public static volatile String jobTimeout = "1d";
 
     /**
-     * trace输出top n行方法调用
+     * 是否美化Trace调用树（合并重复调用节点，动态Proxy类显示为接口类）
      */
     @Option(level = 2,
-            name = "trace-output-lines",
-            summary = "Option to trace output top n sub method call lines",
-            description = "This option setting trace command output top n lines. " +
-                    "The value -1 means full method call lines will be output. "
+            name = "prettify-trace-stack",
+            summary = "Option to prettify trace command output call stack",
+            description = "This option enables to prettify trace command output call stack, " +
+                    "merge two node of the same invoking, change the dynamic proxy classname to interface name."
     )
-    public static volatile int traceOutputLines = 8;
+    public static volatile boolean isPrettifyTraceStack = true;
 
 }
