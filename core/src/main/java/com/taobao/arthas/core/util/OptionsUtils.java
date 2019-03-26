@@ -5,13 +5,11 @@ import com.taobao.arthas.core.GlobalOptions;
 import com.taobao.arthas.core.util.matcher.MethodMatcher;
 import com.taobao.arthas.core.util.matcher.MethodMatchers;
 import com.taobao.arthas.core.util.matcher.WildcardMethodMatcher;
+import com.taobao.arthas.core.util.reflect.FieldUtils;
 
 import java.io.*;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * options util methods
@@ -19,13 +17,17 @@ import java.util.Map;
  */
 public class OptionsUtils {
 
+    private static Map<String, Object> defaultOptionValues = getOptionValues();
+
     public static void saveOptions(File file) {
         OutputStream out = null;
         try {
-            Map<String, Object> map = getOptionsMap();
+            Map<String, Object> map = getOptionValues();
             String json = JSON.toJSONString(map, true);
             out = FileUtils.openOutputStream(file, false);
             out.write(json.getBytes("utf-8"));
+
+            parseTraceStackOptions(GlobalOptions.traceStackPretty);
         } catch (Exception e) {
             // ignore
         } finally {
@@ -50,7 +52,7 @@ public class OptionsUtils {
             }
             //convert json string to map
             Map<String, Object> map = JSON.parseObject(sbJson.toString());
-            setOptions(map);
+            setOptionValues(map);
         } catch (Exception e) {
             // ignore
         } finally {
@@ -86,7 +88,33 @@ public class OptionsUtils {
         return MethodMatchers.or(matchers);
     }
 
-    private static void setOptions(Map<String, Object> map) {
+    public static boolean parseTraceStackOptions(String str){
+        //com.taobao.arthas.core.GlobalOptions.traceStackPretty
+        //merge=true;decorate-proxy=true;min-cost=1ms;top-size=5
+        Map<String, String> map = new HashMap<String, String>();
+        String[] strings = str.split(";");
+        for (String entry : strings) {
+            String[] vals = entry.split("=");
+            //min-cost => mincost
+            if(vals.length > 1) {
+                String key = vals[0].toLowerCase().replaceAll("-", "");
+                map.put(key, vals[1]);
+            }
+        }
+
+        Field[] fields = TraceStackOptions.class.getDeclaredFields();
+        for (Field field : fields) {
+            try {
+                String value = map.get(field.getName().toLowerCase());
+                FieldUtils.setFieldValue(field, field.getType(), value);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static void setOptionValues(Map<String, Object> map) {
         try {
             Field[] fields = GlobalOptions.class.getDeclaredFields();
             for (Field field : fields) {
@@ -101,11 +129,13 @@ public class OptionsUtils {
                     field.setAccessible(false);
                 }
             }
+
+            parseTraceStackOptions(GlobalOptions.traceStackPretty);
         } catch (Exception e) {
         }
     }
 
-    private static Map<String, Object> getOptionsMap() {
+    public static Map<String, Object> getOptionValues() {
         Map<String, Object> map = new LinkedHashMap<String, Object>();
         try {
             Field[] fields = GlobalOptions.class.getDeclaredFields();
@@ -119,4 +149,25 @@ public class OptionsUtils {
         return map;
     }
 
+    public static boolean resetOptionValue(String fieldName){
+        try {
+            Field field = GlobalOptions.class.getDeclaredField(fieldName);
+            if(field != null) {
+                field.setAccessible(true);
+                Object value = defaultOptionValues.get(fieldName);
+                if(value != null) {
+                    field.set(null, value);
+                    return true;
+                }
+                field.setAccessible(false);
+            }
+        } catch (Exception e) {
+        }
+        return false;
+    }
+
+    public static boolean resetAllOptionValues(){
+        setOptionValues(defaultOptionValues);
+        return true;
+    }
 }

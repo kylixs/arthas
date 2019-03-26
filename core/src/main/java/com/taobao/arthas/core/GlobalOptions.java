@@ -105,23 +105,14 @@ public class GlobalOptions {
     @Option(level = 2,
             name = "trace.stack-pretty",
             summary = "Option to prettify trace command output call stack",
-            description = "This option enables to prettify trace command output call stack. \n" +
-                    "level 0: disable stack pretty. \n" +
-                    "level 1: merge two node of the same invoking. \n" +
-                    "level 2: change the dynamic proxy classname to interface name. \n"
+            description = "This option enables to prettify trace command output call stack. " +
+                    "Using a semicolon ';' to split multiple values, eg. merge-nodes=true;decorate-proxy=true;min-cost=1;top-size=5 .\n" +
+                    "merge-nodes=true: merge two node of the same invoking. \n" +
+                    "decorate-proxy=true: change the dynamic proxy classname to interface name. \n"+
+                    "top-size=5: filter sub nodes by top size. \n"+
+                    "min-cost=1: filter nodes less than min-cost value (ms). \n"
     )
-    public static volatile int traceStackPretty = 2;
-
-    /**
-     * trace输出top n行方法调用
-     */
-    @Option(level = 2,
-            name = "trace.stack-top-size",
-            summary = "Option to trace output top n sub method call lines",
-            description = "This option setting trace command output top n lines. " +
-                    "The value -1 means full method call lines will be output. "
-    )
-    public static volatile int traceStackTopSize = 8;
+    public static volatile String traceStackPretty = "merge-nodes=true;decorate-proxy=true;top-size=5;min-cost=1;";
 
     /**
      * trace方法深度
@@ -129,7 +120,7 @@ public class GlobalOptions {
     @Option(level = 2,
             name = "trace.max-depth",
             summary = "Option to trace method depth",
-            description = "This option setting trace command max cascade method depth. The value range is [1-10]."
+            description = "This option setting trace command max cascade method depth. The value range is [1-5]."
     )
     public static volatile int traceMaxDepth = 3;
 
@@ -142,6 +133,6 @@ public class GlobalOptions {
             description = "This option setting ignore methods of all enhance command (eg. trace, watch, monitor)." +
                     "Using a semicolon ';' to split multiple values. eg. *StringUtils;*FileUtils;*FooClass:methodName;"
     )
-    public static volatile String traceIgnoredMethods = "*StringUtils;";
+    public static volatile String traceIgnoredMethods = "*StringUtils;org.springframework.util.*;";
 
 }

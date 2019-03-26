@@ -25,7 +25,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import static com.taobao.arthas.core.util.ArthasCheckUtils.isIn;
 import static com.taobao.text.ui.Element.label;
 import static java.lang.String.format;
 
@@ -36,22 +35,49 @@ import static java.lang.String.format;
  */
 @Name("options")
 @Summary("View and change various Arthas options")
-@Description(Constants.EXAMPLE + "options dump true\n"+ "options unsafe true\n" +
+@Description(Constants.EXAMPLE +
+        "options ls \n"+
+        "options ls --details \n"+
+        "options get unsafe\n" +
+        "options set unsafe true\n" +
+        "options reset unsafe\n" +
+        "options reset --all\n" +
         Constants.WIKI + Constants.WIKI_HOME + "options")
 public class OptionsCommand extends AnnotatedCommand {
+    private String operate;
     private String optionName;
     private String optionValue;
+    private boolean isDetails;
+    private boolean isAll;
 
-    @Argument(index = 0, argName = "options-name", required = false)
+    @Argument(index = 0, argName = "operate", required = false)
+    @Description("Operate: ls, list, get, set, reset")
+    public void setOperate(String operate) {
+        this.operate = operate;
+    }
+
+    @Argument(index = 1, argName = "options-name", required = false)
     @Description("Option name")
     public void setOptionName(String optionName) {
         this.optionName = optionName;
     }
 
-    @Argument(index = 1, argName = "options-value", required = false)
+    @Argument(index = 2, argName = "options-value", required = false)
     @Description("Option value")
     public void setOptionValue(String optionValue) {
         this.optionValue = optionValue;
+    }
+
+    @com.taobao.middleware.cli.annotations.Option(shortName = "D", longName = "details", flag = true)
+    @Description("Show the details of options, include summary and description")
+    public void setDetails(boolean b) {
+        isDetails = b;
+    }
+
+    @com.taobao.middleware.cli.annotations.Option(shortName = "A", longName = "all", flag = true)
+    @Description("Reset all options value to default.")
+    public void setAll(boolean b) {
+        isAll = b;
     }
 
     @Override
@@ -61,8 +87,18 @@ public class OptionsCommand extends AnnotatedCommand {
                 processShow(process);
             } else if (isShowName()) {
                 processShowName(process);
-            } else {
+            } else if(isSetName()) {
                 processChangeNameValue(process);
+            } else if(isResetAll()) {
+                if(!StringUtils.isBlank(optionName)){
+                    process.write(format("Reset all options value don't need specify option name. [%s]\n", optionName));
+                    return;
+                }
+                processResetAllValue(process);
+            } else if(isResetName()) {
+                processResetNameValue(process);
+            } else {
+                process.write(format("Options [%s] arguments is invalid, see also the help 'options -h'.\n", operate));
             }
         } catch (Throwable t) {
             // ignore
@@ -73,53 +109,49 @@ public class OptionsCommand extends AnnotatedCommand {
 
     private void processShow(CommandProcess process) throws IllegalAccessException {
         Collection<Field> fields = findOptions(new RegexMatcher(".*"));
-        process.write(RenderUtil.render(drawShowTable(fields), process.width()));
+        process.write(RenderUtil.render(isDetails?drawShowDetailsTable(fields):drawShowTable(fields), process.width()));
     }
 
     private void processShowName(CommandProcess process) throws IllegalAccessException {
         Collection<Field> fields = findOptions(new EqualsMatcher<String>(optionName));
-        process.write(RenderUtil.render(drawShowTable(fields), process.width()));
+        if(fields.isEmpty()){
+            process.write(format("options[%s] not found.\n", optionName));
+        }else {
+            if(isDetails){
+                process.write(RenderUtil.render(drawShowDetailsTable(fields), process.width()));
+            }else {
+//                Field field = fields.iterator().next();
+//                process.write(field.get(null) + "\n");
+                process.write(RenderUtil.render(drawShowTable(fields), process.width()));
+            }
+        }
     }
 
     private void processChangeNameValue(CommandProcess process) throws IllegalAccessException {
-        Collection<Field> fields = findOptions(new EqualsMatcher<String>(optionName));
-
-        // name not exists
-        if (fields.isEmpty()) {
+        Field field = findFieldByOptionName();
+        if (field == null) {
             process.write(format("options[%s] not found.\n", optionName));
             return;
         }
-
-        Field field = fields.iterator().next();
         Option optionAnnotation = field.getAnnotation(Option.class);
         Class<?> type = field.getType();
         Object beforeValue = FieldUtils.readStaticField(field);
         Object afterValue;
 
         try {
-            // try to case string to type
-            if (isIn(type, int.class, Integer.class)) {
-                FieldUtils.writeStaticField(field, afterValue = Integer.valueOf(optionValue));
-            } else if (isIn(type, long.class, Long.class)) {
-                FieldUtils.writeStaticField(field, afterValue = Long.valueOf(optionValue));
-            } else if (isIn(type, boolean.class, Boolean.class)) {
-                FieldUtils.writeStaticField(field, afterValue = Boolean.valueOf(optionValue));
-            } else if (isIn(type, double.class, Double.class)) {
-                FieldUtils.writeStaticField(field, afterValue = Double.valueOf(optionValue));
-            } else if (isIn(type, float.class, Float.class)) {
-                FieldUtils.writeStaticField(field, afterValue = Float.valueOf(optionValue));
-            } else if (isIn(type, byte.class, Byte.class)) {
-                FieldUtils.writeStaticField(field, afterValue = Byte.valueOf(optionValue));
-            } else if (isIn(type, short.class, Short.class)) {
-                FieldUtils.writeStaticField(field, afterValue = Short.valueOf(optionValue));
-            } else if (isIn(type, short.class, String.class)) {
-                FieldUtils.writeStaticField(field, afterValue = optionValue);
-            } else {
-                process.write(format("Options[%s] type[%s] desupported.\n", optionName, type.getSimpleName()));
+            if(optionName.equals("trace.stack-pretty")){
+                if(!OptionsUtils.parseTraceStackOptions(optionValue)){
+                    process.write(format("Options[%s] value[%s] is invalid. current value [%s].\n", optionName, optionValue, String.valueOf(beforeValue)));
+                    return;
+                }
+            }
+            afterValue = FieldUtils.setFieldValue(field, type, optionValue);
+            if(afterValue == null){
+                process.write(format("Options[%s] type[%s] not supported.\n", optionName, type.getSimpleName()));
                 return;
             }
 
-            OptionsUtils.saveOptions(new File(com.taobao.arthas.core.util.Constants.OPTIONS_FILE));
+            saveOptions();
         } catch (Throwable t) {
             process.write(format("Cannot cast option value[%s] to type[%s].\n", optionValue, type.getSimpleName()));
             return;
@@ -134,20 +166,68 @@ public class OptionsCommand extends AnnotatedCommand {
         process.write(RenderUtil.render(table, process.width()));
     }
 
+    private void saveOptions() {
+        OptionsUtils.saveOptions(new File(com.taobao.arthas.core.util.Constants.OPTIONS_FILE));
+    }
+
+    private void processResetAllValue(CommandProcess process) throws IllegalAccessException {
+        OptionsUtils.resetAllOptionValues();
+        processShow(process);
+        saveOptions();
+    }
+
+    private void processResetNameValue(CommandProcess process) throws IllegalAccessException {
+        Field field = findFieldByOptionName();
+        if (field == null) {
+            process.write(format("options[%s] not found.\n", optionName));
+            return;
+        }
+        boolean result = OptionsUtils.resetOptionValue(field.getName());
+        if(!result){
+            process.write(format("Reset option [%s] failed.\n", optionName));
+        }else {
+            processShowName(process);
+        }
+        saveOptions();
+    }
+
+    private Field findFieldByOptionName() {
+        Collection<Field> fields = findOptions(new EqualsMatcher<String>(optionName));
+        // name not exists
+        if (fields.isEmpty()) {
+            return null;
+        }
+        return fields.iterator().next();
+    }
 
     /*
      * 判断当前动作是否需要展示整个options
      */
     private boolean isShow() {
-        return StringUtils.isBlank(optionName) && StringUtils.isBlank(optionValue);
+        return "ls".equals(operate) || "list".equals(operate) || StringUtils.isBlank(operate);
     }
-
 
     /*
      * 判断当前动作是否需要展示某个Name的值
      */
     private boolean isShowName() {
-        return !StringUtils.isBlank(optionName) && StringUtils.isBlank(optionValue);
+        return "get".equals(operate) && !StringUtils.isBlank(optionName);
+    }
+
+    private boolean isSetName() {
+        return "set".equals(operate) && !StringUtils.isBlank(optionName) && !StringUtils.isBlank(optionValue);
+    }
+
+    private boolean isReset() {
+        return "reset".equals(operate);
+    }
+
+    private boolean isResetName() {
+        return isReset() && !isAll && !StringUtils.isBlank(optionName);
+    }
+
+    private boolean isResetAll() {
+        return isReset() && isAll;
     }
 
     private Collection<Field> findOptions(Matcher optionNameMatcher) {
@@ -168,6 +248,22 @@ public class OptionsCommand extends AnnotatedCommand {
     }
 
     private Element drawShowTable(Collection<Field> optionFields) throws IllegalAccessException {
+        TableElement table = new TableElement( 1, 1, 5)
+                .leftCellPadding(1).rightCellPadding(1);
+        table.row(true,
+                label("TYPE").style(Decoration.bold.bold()),
+                label("NAME").style(Decoration.bold.bold()),
+                label("VALUE").style(Decoration.bold.bold()));
+
+        for (final Field optionField : optionFields) {
+            final Option optionAnnotation = optionField.getAnnotation(Option.class);
+            table.row(optionField.getType().getSimpleName(),
+                    optionAnnotation.name(),
+                    "" + optionField.get(null));
+        }
+        return table;
+    }
+    private Element drawShowDetailsTable(Collection<Field> optionFields) throws IllegalAccessException {
         TableElement table = new TableElement(1, 1, 2, 1, 3, 6)
                 .leftCellPadding(1).rightCellPadding(1);
         table.row(true, label("LEVEL").style(Decoration.bold.bold()),

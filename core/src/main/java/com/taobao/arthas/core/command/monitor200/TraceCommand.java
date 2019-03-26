@@ -158,7 +158,7 @@ public class TraceCommand extends EnhancerCommand {
         MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.traceIgnoredMethods);
         EnhancerAffect totalEffect = effect;
         int depth = 1;
-        int maxDepth = Math.min(GlobalOptions.traceMaxDepth, 10);
+        int maxDepth = Math.min(GlobalOptions.traceMaxDepth, 5);
         process.write(format("Trace level:%d, %s\n", depth, effect));
         while(++depth <= maxDepth){
             MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();

@@ -11,6 +11,8 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 
+import static com.taobao.arthas.core.util.ArthasCheckUtils.isIn;
+
 /**
  * @author ralf0131 2016-12-28 14:39.
  */
@@ -447,5 +449,28 @@ public class FieldUtils {
         if (expression == false) {
             throw new IllegalArgumentException(String.format(message, values));
         }
+    }
+
+    public static Object setFieldValue(Field field, Class<?> type, String optionValue) throws IllegalAccessException {
+        Object afterValue = null;
+        // try to case string to type
+        if (isIn(type, int.class, Integer.class)) {
+            writeStaticField(field, afterValue = Integer.valueOf(optionValue));
+        } else if (isIn(type, long.class, Long.class)) {
+            writeStaticField(field, afterValue = Long.valueOf(optionValue));
+        } else if (isIn(type, boolean.class, Boolean.class)) {
+            writeStaticField(field, afterValue = Boolean.valueOf(optionValue));
+        } else if (isIn(type, double.class, Double.class)) {
+            writeStaticField(field, afterValue = Double.valueOf(optionValue));
+        } else if (isIn(type, float.class, Float.class)) {
+            writeStaticField(field, afterValue = Float.valueOf(optionValue));
+        } else if (isIn(type, byte.class, Byte.class)) {
+            writeStaticField(field, afterValue = Byte.valueOf(optionValue));
+        } else if (isIn(type, short.class, Short.class)) {
+            writeStaticField(field, afterValue = Short.valueOf(optionValue));
+        } else if (isIn(type, short.class, String.class)) {
+            writeStaticField(field, afterValue = optionValue);
+        }
+        return afterValue;
     }
 }

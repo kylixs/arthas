@@ -2,6 +2,7 @@ package com.taobao.arthas.core.view;
 
 import com.taobao.arthas.core.GlobalOptions;
 import com.taobao.arthas.core.util.StringUtils;
+import com.taobao.arthas.core.util.TraceStackOptions;
 
 import java.util.*;
 
@@ -43,7 +44,7 @@ public class TreeView implements View {
     @Override
     public String draw() {
 
-        if (GlobalOptions.traceStackPretty > 0) {
+        if (TraceStackOptions.mergeNodes) {
             rebuildInvokeTree(root);
         }
 
@@ -85,7 +86,7 @@ public class TreeView implements View {
         if(node.parent != null && shouldMergeNodes(node, node.children)){
             Node childNode = node.children.get(0);
             //replace dynamic proxy className with parentNode
-            if(GlobalOptions.traceStackPretty > 1 && childNode.data.startsWith("com.sun.proxy.$Proxy")){
+            if(TraceStackOptions.decorateProxy && childNode.data.startsWith("com.sun.proxy.$Proxy")){
                 childNode.setData(node.data);
             }
             node.parent.replaceChild(node, childNode);
@@ -166,7 +167,17 @@ public class TreeView implements View {
                 }
             });
 
-            int outputLines = GlobalOptions.traceStackTopSize;
+            double minCost = TraceStackOptions.minCost;
+            if(minCost > 0){
+                for (int i = node.children.size() - 1; i >= 0; i--) {
+                    Node childNode = node.children.get(i);
+                    if( Node.getCostInMillis(childNode.totalCost) < minCost ){
+                        node.children.remove(i);
+                    }
+                }
+            }
+
+            int outputLines = TraceStackOptions.topSize;
             if(outputLines > 1){
                 //remove n+1 children nodes ..
                 for (int i = node.children.size() - 1; i >= outputLines; i--) {
@@ -385,7 +396,7 @@ public class TreeView implements View {
         /**
          * convert nano-seconds to milli-seconds
          */
-        double getCostInMillis(long nanoSeconds) {
+        static double getCostInMillis(long nanoSeconds) {
             return nanoSeconds / 1000000.0;
         }
 
@@ -394,10 +405,10 @@ public class TreeView implements View {
             if (times <= 1) {
                 sb.append("[").append(getCostInMillis(getCost())).append(TIME_UNIT).append("] ");
             } else {
-                sb.append("[min=").append(getCostInMillis(minCost)).append(TIME_UNIT).append(",max=")
-                        .append(getCostInMillis(maxCost)).append(TIME_UNIT).append(",total=")
-                        .append(getCostInMillis(totalCost)).append(TIME_UNIT).append(",count=")
-                        .append(times).append("] ");
+                sb.append("[total=").append(getCostInMillis(totalCost)).append(TIME_UNIT)
+                        .append(",min=").append(getCostInMillis(minCost)).append(TIME_UNIT)
+                        .append(",max=").append(getCostInMillis(maxCost)).append(TIME_UNIT)
+                        .append(",count=").append(times).append("] ");
             }
             return sb.toString();
         }
