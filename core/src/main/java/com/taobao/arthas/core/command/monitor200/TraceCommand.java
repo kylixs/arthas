@@ -1,9 +1,17 @@
 package com.taobao.arthas.core.command.monitor200;
 
+import com.taobao.arthas.core.GlobalOptions;
 import com.taobao.arthas.core.advisor.AdviceListener;
+import com.taobao.arthas.core.advisor.Enhancer;
+import com.taobao.arthas.core.advisor.InvokeTraceable;
 import com.taobao.arthas.core.command.Constants;
 import com.taobao.arthas.core.shell.command.CommandProcess;
+import com.taobao.arthas.core.shell.session.Session;
+import com.taobao.arthas.core.util.LogUtil;
+import com.taobao.arthas.core.util.OptionsUtils;
 import com.taobao.arthas.core.util.SearchUtils;
+import com.taobao.arthas.core.util.affect.EnhancerAffect;
+import com.taobao.arthas.core.util.collection.MethodCollector;
 import com.taobao.arthas.core.util.matcher.*;
 import com.taobao.middleware.cli.annotations.Argument;
 import com.taobao.middleware.cli.annotations.Description;
@@ -11,8 +19,12 @@ import com.taobao.middleware.cli.annotations.Name;
 import com.taobao.middleware.cli.annotations.Option;
 import com.taobao.middleware.cli.annotations.Summary;
 
+import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
 import java.util.ArrayList;
 import java.util.List;
+
+import static java.lang.String.format;
 
 /**
  * 调用跟踪命令<br/>
@@ -141,6 +153,32 @@ public class TraceCommand extends EnhancerCommand {
         } else {
             return new PathTraceAdviceListener(this, process);
         }
+    }
+
+    protected EnhancerAffect onEnhancerResult(CommandProcess process, int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect) throws UnmodifiableClassException {
+        MethodCollector globalEnhancedMethodCollector = new MethodCollector();
+        MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.ignoreEnhanceMethods);
+        EnhancerAffect totalEffect = effect;
+        int depth = 1;
+        int maxDepth = Math.min(GlobalOptions.traceDepth, 10);
+        process.write(format("Trace level:%d, %s\n", depth, effect));
+        while(++depth <= maxDepth){
+            MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
+            globalEnhancedMethodCollector.merge(enhancedMethodCollector);
+            MethodCollector visitedMethodCollector = effect.getVisitedMethodCollector();
+            CollectionMatcher newClassNameMatcher = visitedMethodCollector.getClassNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
+            CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
+            if (newMethodNameMatcher.size() == 0){
+                break;
+            }
+
+            effect = Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
+                    skipJDKTrace, newClassNameMatcher, newMethodNameMatcher);
+            process.write(format("Trace level:%d, %s\n", depth, effect));
+            totalEffect.cCnt(effect.cCnt());
+            totalEffect.mCnt(effect.mCnt());
+        }
+        return totalEffect;
     }
 
     /**

@@ -135,7 +135,7 @@ public class GlobalOptions {
      * 忽略增强的方法列表
      */
     @Option(level = 2,
-            name = "ignore-enhance-methods",
+            name = "enhance.ignore-methods",
             summary = "Option to set ignore methods of all enhance command",
             description = "This option setting ignore methods of all enhance command (eg. trace, watch, monitor)." +
                     "Using a semicolon ';' to split multiple values. eg. *StringUtils;*FileUtils;*FooClass:methodName;"

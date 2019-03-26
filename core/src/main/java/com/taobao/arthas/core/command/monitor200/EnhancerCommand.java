@@ -127,25 +127,7 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
                 return;
             }
 
-            MethodCollector globalEnhancedMethodCollector = new MethodCollector();
-            MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.ignoreEnhanceMethods);
-
-            int depth = 1;
-            int maxDepth = Math.min(GlobalOptions.traceDepth, 10);
-            while(++depth <= maxDepth){
-                MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
-                globalEnhancedMethodCollector.merge(enhancedMethodCollector);
-                MethodCollector visitedMethodCollector = effect.getVisitedMethodCollector();
-                CollectionMatcher newClassNameMatcher = visitedMethodCollector.getClassNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
-                CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
-                if (newMethodNameMatcher.size() == 0){
-                    break;
-                }
-
-                process.write(effect + "\n");
-                effect = Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
-                        skipJDKTrace, newClassNameMatcher, newMethodNameMatcher);
-            }
+            effect = onEnhancerResult(process, lock, inst, listener, skipJDKTrace, effect);
 
             // 这里做个补偿,如果在enhance期间,unLock被调用了,则补偿性放弃
             if (session.getLock() == lock) {
@@ -167,11 +149,16 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
         }
     }
 
+    protected EnhancerAffect onEnhancerResult(CommandProcess process, int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect) throws UnmodifiableClassException {
+
+        return effect;
+    }
+
     protected void completeArgument3(Completion completion) {
         super.complete(completion);
     }
 
-    private static void warn(CommandProcess process, String message) {
+    protected static void warn(CommandProcess process, String message) {
         logger.error(null, message);
         process.write("cannot operate the current command, pls. check arthas.log\n");
         if (process.isForeground()) {
