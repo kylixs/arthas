@@ -156,27 +156,28 @@ public class TraceCommand extends EnhancerCommand {
     protected EnhancerAffect onEnhancerResult(CommandProcess process, int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect) throws UnmodifiableClassException {
         MethodCollector globalEnhancedMethodCollector = new MethodCollector();
         MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.traceIgnoredMethods);
-        EnhancerAffect totalEffect = effect;
         int depth = 1;
         int maxDepth = Math.min(GlobalOptions.traceMaxDepth, 5);
         process.write(format("Trace level:%d, %s\n", depth, effect));
         while(++depth <= maxDepth){
+            if(isExceedEnhanceMethodLimit(effect)){
+                break;
+            }
             MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
             globalEnhancedMethodCollector.merge(enhancedMethodCollector);
             MethodCollector visitedMethodCollector = effect.getVisitedMethodCollector();
             CollectionMatcher newClassNameMatcher = visitedMethodCollector.getClassNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
             CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
+            visitedMethodCollector.clear();
             if (newMethodNameMatcher.size() == 0){
                 break;
             }
 
-            effect = Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
-                    skipJDKTrace, newClassNameMatcher, newMethodNameMatcher);
+            Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
+                    skipJDKTrace, newClassNameMatcher, newMethodNameMatcher, effect);
             process.write(format("Trace level:%d, %s\n", depth, effect));
-            totalEffect.cCnt(effect.cCnt());
-            totalEffect.mCnt(effect.mCnt());
         }
-        return totalEffect;
+        return effect;
     }
 
     /**

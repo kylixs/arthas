@@ -98,7 +98,7 @@ public class OptionsCommand extends AnnotatedCommand {
             } else if(isResetName()) {
                 processResetNameValue(process);
             } else {
-                process.write(format("Options [%s] arguments is invalid, see also the help 'options -h'.\n", operate));
+                process.write(format("Options [%s] arguments is invalid, see also 'options -h'.\n", operate));
             }
         } catch (Throwable t) {
             // ignore

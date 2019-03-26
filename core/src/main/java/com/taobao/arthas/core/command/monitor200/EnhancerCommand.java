@@ -17,13 +17,12 @@ import com.taobao.arthas.core.shell.handlers.shell.QExitHandler;
 import com.taobao.arthas.core.shell.session.Session;
 import com.taobao.arthas.core.util.Constants;
 import com.taobao.arthas.core.util.LogUtil;
-import com.taobao.arthas.core.util.OptionsUtils;
 import com.taobao.arthas.core.util.affect.EnhancerAffect;
-import com.taobao.arthas.core.util.collection.MethodCollector;
-import com.taobao.arthas.core.util.matcher.CollectionMatcher;
 import com.taobao.arthas.core.util.matcher.Matcher;
 import com.taobao.arthas.core.util.matcher.MethodMatcher;
 import com.taobao.middleware.logger.Logger;
+
+import static java.lang.String.format;
 
 /**
  * @author beiwei30 on 29/11/2016.
@@ -112,8 +111,9 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
                 skipJDKTrace = ((AbstractTraceAdviceListener) listener).getCommand().isSkipJDKTrace();
             }
 
-            EnhancerAffect effect = Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
-                    skipJDKTrace, getClassNameMatcher(), getMethodNameMatcher());
+            EnhancerAffect effect = new EnhancerAffect();
+            Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable, skipJDKTrace,
+                    getClassNameMatcher(), getMethodNameMatcher(), effect);
 
             if (effect.cCnt() == 0 || effect.mCnt() == 0) {
                 // no class effected
@@ -139,6 +139,11 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
             }
 
             process.write(effect + "\n");
+
+            if(isExceedEnhanceMethodLimit(effect)){
+                process.write(format("Exceed enhance method limits:%d\n", GlobalOptions.enhanceMethodLimits));
+                process.end();
+            }
         } catch (UnmodifiableClassException e) {
             logger.error(null, "error happens when enhancing class", e);
         } finally {
@@ -147,6 +152,10 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
                 process.session().unLock();
             }
         }
+    }
+
+    protected boolean isExceedEnhanceMethodLimit(EnhancerAffect effect) {
+        return effect.mCnt() >= GlobalOptions.enhanceMethodLimits;
     }
 
     protected EnhancerAffect onEnhancerResult(CommandProcess process, int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect) throws UnmodifiableClassException {

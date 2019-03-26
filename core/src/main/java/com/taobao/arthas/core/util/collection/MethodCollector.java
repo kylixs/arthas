@@ -40,6 +40,10 @@ public class MethodCollector {
         return false;
     }
 
+    public void clear() {
+        classMethodMap.clear();
+    }
+
     public Collection<String> getClassNames(){
         return classMethodMap.keySet();
     }

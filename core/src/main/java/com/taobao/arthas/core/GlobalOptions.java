@@ -100,10 +100,20 @@ public class GlobalOptions {
     public static volatile String jobTimeout = "1d";
 
     /**
+     * trace方法深度
+     */
+    @Option(level = 2,
+            name = "enhance-method-limits",
+            summary = "Option to setting enhance method limits",
+            description = "This option setting enhance method limits, use to prevent enhance large number of class methods, making Java process slowly."
+    )
+    public static volatile int enhanceMethodLimits = 100;
+
+    /**
      * 是否美化Trace调用树（合并重复调用节点，动态Proxy类显示为接口类）
      */
     @Option(level = 2,
-            name = "trace.stack-pretty",
+            name = "trace-stack-pretty",
             summary = "Option to prettify trace command output call stack",
             description = "This option enables to prettify trace command output call stack. " +
                     "Using a semicolon ';' to split multiple values, eg. merge-nodes=true;decorate-proxy=true;min-cost=1;top-size=5 .\n" +
@@ -118,7 +128,7 @@ public class GlobalOptions {
      * trace方法深度
      */
     @Option(level = 2,
-            name = "trace.max-depth",
+            name = "trace-max-depth",
             summary = "Option to trace method depth",
             description = "This option setting trace command max cascade method depth. The value range is [1-5]."
     )
@@ -128,7 +138,7 @@ public class GlobalOptions {
      * 忽略增强的方法列表
      */
     @Option(level = 2,
-            name = "trace.ignored-methods",
+            name = "trace-ignored-methods",
             summary = "Option to set ignore methods of all enhance command",
             description = "This option setting ignore methods of all enhance command (eg. trace, watch, monitor)." +
                     "Using a semicolon ';' to split multiple values. eg. *StringUtils;*FileUtils;*FooClass:methodName;"

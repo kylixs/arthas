@@ -271,15 +271,14 @@ public class Enhancer implements ClassFileTransformer {
      * @return 增强影响范围
      * @throws UnmodifiableClassException 增强失败
      */
-    public static synchronized EnhancerAffect enhance(
+    public static synchronized void enhance(
             final Instrumentation inst,
             final int adviceId,
             final boolean isTracing,
             final boolean skipJDKTrace,
             final Matcher classNameMatcher,
-            final MethodMatcher methodNameMatcher) throws UnmodifiableClassException {
-
-        final EnhancerAffect affect = new EnhancerAffect();
+            final MethodMatcher methodNameMatcher,
+            final EnhancerAffect affect) throws UnmodifiableClassException {
 
         // 获取需要增强的类集合
         final Set<Class<?>> enhanceClassSet = GlobalOptions.isDisableSubClass
@@ -324,8 +323,6 @@ public class Enhancer implements ClassFileTransformer {
         } finally {
             inst.removeTransformer(enhancer);
         }
-
-        return affect;
     }
 
 

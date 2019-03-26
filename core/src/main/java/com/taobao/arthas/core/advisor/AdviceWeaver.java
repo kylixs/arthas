@@ -395,6 +395,10 @@ public class AdviceWeaver extends ClassVisitor implements Opcodes {
                 || ArthasCheckUtils.isEquals(methodName, "<clinit>");
     }
 
+    private boolean isExceedEnhanceMethodLimit() {
+        return affect.mCnt() >= GlobalOptions.enhanceMethodLimits;
+    }
+
     private boolean matchingMethod(String methodName) {
         if(matcher.matching(className, methodName)) {
             return true;
@@ -420,6 +424,10 @@ public class AdviceWeaver extends ClassVisitor implements Opcodes {
         final MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
 
         if (isIgnore(mv, access, name)) {
+            return mv;
+        }
+
+        if(isExceedEnhanceMethodLimit()){
             return mv;
         }
 
