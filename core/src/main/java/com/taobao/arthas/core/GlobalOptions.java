@@ -127,9 +127,9 @@ public class GlobalOptions {
     @Option(level = 2,
             name = "trace-depth",
             summary = "Option to trace method depth",
-            description = "This option setting trace command max cascade method depth. The value range is [1-20]."
+            description = "This option setting trace command max cascade method depth. The value range is [1-10]."
     )
-    public static volatile int traceDepth = 10;
+    public static volatile int traceDepth = 3;
 
     /**
      * 忽略增强的方法列表

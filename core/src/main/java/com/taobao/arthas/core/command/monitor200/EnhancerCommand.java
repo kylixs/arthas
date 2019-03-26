@@ -131,7 +131,7 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
             MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.ignoreEnhanceMethods);
 
             int depth = 1;
-            int maxDepth = Math.min(GlobalOptions.traceDepth, 20);
+            int maxDepth = Math.min(GlobalOptions.traceDepth, 10);
             while(++depth <= maxDepth){
                 MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
                 globalEnhancedMethodCollector.merge(enhancedMethodCollector);
