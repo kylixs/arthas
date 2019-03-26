@@ -6,8 +6,6 @@ import com.taobao.arthas.core.advisor.Enhancer;
 import com.taobao.arthas.core.advisor.InvokeTraceable;
 import com.taobao.arthas.core.command.Constants;
 import com.taobao.arthas.core.shell.command.CommandProcess;
-import com.taobao.arthas.core.shell.session.Session;
-import com.taobao.arthas.core.util.LogUtil;
 import com.taobao.arthas.core.util.OptionsUtils;
 import com.taobao.arthas.core.util.SearchUtils;
 import com.taobao.arthas.core.util.affect.EnhancerAffect;
@@ -157,10 +155,10 @@ public class TraceCommand extends EnhancerCommand {
 
     protected EnhancerAffect onEnhancerResult(CommandProcess process, int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect) throws UnmodifiableClassException {
         MethodCollector globalEnhancedMethodCollector = new MethodCollector();
-        MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.ignoreEnhanceMethods);
+        MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.traceIgnoredMethods);
         EnhancerAffect totalEffect = effect;
         int depth = 1;
-        int maxDepth = Math.min(GlobalOptions.traceDepth, 10);
+        int maxDepth = Math.min(GlobalOptions.traceMaxDepth, 10);
         process.write(format("Trace level:%d, %s\n", depth, effect));
         while(++depth <= maxDepth){
             MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();

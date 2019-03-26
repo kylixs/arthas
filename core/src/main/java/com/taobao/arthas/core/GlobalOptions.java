@@ -103,43 +103,45 @@ public class GlobalOptions {
      * 是否美化Trace调用树（合并重复调用节点，动态Proxy类显示为接口类）
      */
     @Option(level = 2,
-            name = "prettify-trace-stack",
+            name = "trace.stack-pretty",
             summary = "Option to prettify trace command output call stack",
-            description = "This option enables to prettify trace command output call stack, " +
-                    "merge two node of the same invoking, change the dynamic proxy classname to interface name."
+            description = "This option enables to prettify trace command output call stack. \n" +
+                    "level 0: disable stack pretty. \n" +
+                    "level 1: merge two node of the same invoking. \n" +
+                    "level 2: change the dynamic proxy classname to interface name. \n"
     )
-    public static volatile boolean isPrettifyTraceStack = true;
+    public static volatile int traceStackPretty = 2;
 
     /**
      * trace输出top n行方法调用
      */
     @Option(level = 2,
-            name = "trace-output-lines",
+            name = "trace.stack-top-size",
             summary = "Option to trace output top n sub method call lines",
             description = "This option setting trace command output top n lines. " +
                     "The value -1 means full method call lines will be output. "
     )
-    public static volatile int traceOutputLines = 8;
+    public static volatile int traceStackTopSize = 8;
 
     /**
      * trace方法深度
      */
     @Option(level = 2,
-            name = "trace-depth",
+            name = "trace.max-depth",
             summary = "Option to trace method depth",
             description = "This option setting trace command max cascade method depth. The value range is [1-10]."
     )
-    public static volatile int traceDepth = 3;
+    public static volatile int traceMaxDepth = 3;
 
     /**
      * 忽略增强的方法列表
      */
     @Option(level = 2,
-            name = "enhance.ignore-methods",
+            name = "trace.ignored-methods",
             summary = "Option to set ignore methods of all enhance command",
             description = "This option setting ignore methods of all enhance command (eg. trace, watch, monitor)." +
                     "Using a semicolon ';' to split multiple values. eg. *StringUtils;*FileUtils;*FooClass:methodName;"
     )
-    public static volatile String ignoreEnhanceMethods = "*StringUtils;";
+    public static volatile String traceIgnoredMethods = "*StringUtils;";
 
 }

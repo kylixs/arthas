@@ -43,7 +43,7 @@ public class TreeView implements View {
     @Override
     public String draw() {
 
-        if (GlobalOptions.isPrettifyTraceStack) {
+        if (GlobalOptions.traceStackPretty > 0) {
             rebuildInvokeTree(root);
         }
 
@@ -85,7 +85,7 @@ public class TreeView implements View {
         if(node.parent != null && shouldMergeNodes(node, node.children)){
             Node childNode = node.children.get(0);
             //replace dynamic proxy className with parentNode
-            if(childNode.data.startsWith("com.sun.proxy.$Proxy")){
+            if(GlobalOptions.traceStackPretty > 1 && childNode.data.startsWith("com.sun.proxy.$Proxy")){
                 childNode.setData(node.data);
             }
             node.parent.replaceChild(node, childNode);
@@ -166,7 +166,7 @@ public class TreeView implements View {
                 }
             });
 
-            int outputLines = GlobalOptions.traceOutputLines;
+            int outputLines = GlobalOptions.traceStackTopSize;
             if(outputLines > 1){
                 //remove n+1 children nodes ..
                 for (int i = node.children.size() - 1; i >= outputLines; i--) {
