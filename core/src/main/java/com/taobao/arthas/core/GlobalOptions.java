@@ -110,4 +110,36 @@ public class GlobalOptions {
     )
     public static volatile boolean isPrettifyTraceStack = true;
 
+    /**
+     * trace输出top n行方法调用
+     */
+    @Option(level = 2,
+            name = "trace-output-lines",
+            summary = "Option to trace output top n sub method call lines",
+            description = "This option setting trace command output top n lines. " +
+                    "The value -1 means full method call lines will be output. "
+    )
+    public static volatile int traceOutputLines = 8;
+
+    /**
+     * trace方法深度
+     */
+    @Option(level = 2,
+            name = "trace-depth",
+            summary = "Option to trace method depth",
+            description = "This option setting trace command max cascade method depth. The value range is [1-20]."
+    )
+    public static volatile int traceDepth = 10;
+
+    /**
+     * 忽略增强的方法列表
+     */
+    @Option(level = 2,
+            name = "ignore-enhance-methods",
+            summary = "Option to set ignore methods of all enhance command",
+            description = "This option setting ignore methods of all enhance command (eg. trace, watch, monitor)." +
+                    "Using a semicolon ';' to split multiple values. eg. *StringUtils;*FileUtils;*FooClass:methodName;"
+    )
+    public static volatile String ignoreEnhanceMethods = "*StringUtils;";
+
 }

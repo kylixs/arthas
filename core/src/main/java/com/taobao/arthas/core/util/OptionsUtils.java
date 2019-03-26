@@ -2,10 +2,16 @@ package com.taobao.arthas.core.util;
 
 import com.alibaba.fastjson.JSON;
 import com.taobao.arthas.core.GlobalOptions;
+import com.taobao.arthas.core.util.matcher.MethodMatcher;
+import com.taobao.arthas.core.util.matcher.MethodMatchers;
+import com.taobao.arthas.core.util.matcher.WildcardMethodMatcher;
 
 import java.io.*;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * options util methods
@@ -56,6 +62,28 @@ public class OptionsUtils {
                 // ignore
             }
         }
+    }
+
+    /**
+     * parse ignore method list, eg. "*StringUtils;*FileUtils;*FooClass:methodName;"
+     * @param str
+     * @return
+     */
+    public static MethodMatcher<String> parseIgnoreMethods(String str) {
+        List<MethodMatcher<String>> matchers = new ArrayList<MethodMatcher<String>>();
+        String[] classMethods = str.split(";");
+        for (String classMethod : classMethods) {
+            String classNamePattern = classMethod;
+            String methodNamePattern = null;
+            int p = classMethod.indexOf(":");
+            if(p != -1){
+                classNamePattern = classMethod.substring(0, p);
+                methodNamePattern = classMethod.substring(p+1);
+            }
+            MethodMatcher<String> matcher = new WildcardMethodMatcher(classNamePattern, methodNamePattern);
+            matchers.add(matcher);
+        }
+        return MethodMatchers.or(matchers);
     }
 
     private static void setOptions(Map<String, Object> map) {

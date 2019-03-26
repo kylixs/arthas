@@ -1,6 +1,7 @@
 package com.taobao.arthas.core.util.collection;
 
 import com.taobao.arthas.core.util.matcher.CollectionMatcher;
+import com.taobao.arthas.core.util.matcher.MethodMatcher;
 
 import java.util.*;
 
@@ -43,15 +44,15 @@ public class MethodCollector {
         return classMethodMap.keySet();
     }
 
-    public CollectionMatcher getClassNameMatcher(MethodCollector filteredCollector, boolean skipJdkClass ){
+    public CollectionMatcher getClassNameMatcher(MethodCollector filteredCollector, MethodMatcher<String> ignoreMethodsMatcher, boolean skipJdkClass){
         Collection<String> classNames = new HashSet<String>(16);
         for (Map.Entry<String, List<String>> entry : classMethodMap.entrySet()) {
             String className = entry.getKey();
             if(skipJdkClass && className.startsWith("java/")){
                 continue;
             }
-            for (String name : entry.getValue()) {
-                if(filteredCollector==null || !filteredCollector.contains(className, name)){
+            for (String methodName : entry.getValue()) {
+                if(filteredCollector==null || !(filteredCollector.contains(className, methodName) || ignoreMethodsMatcher.matching(className, methodName))){
                     classNames.add(toNormalClassName(className));
                     break;
                 }
@@ -64,16 +65,16 @@ public class MethodCollector {
         return className.replace('/','.');
     }
 
-    public CollectionMatcher getMethodNameMatcher(MethodCollector filteredCollector, boolean skipJdkClass) {
+    public CollectionMatcher getMethodNameMatcher(MethodCollector filteredCollector, MethodMatcher<String> ignoreMethodsMatcher, boolean skipJdkClass) {
         Collection<String> fullyMethodNames = new HashSet<String>(16);
         for (Map.Entry<String, List<String>> entry : classMethodMap.entrySet()) {
             String className = entry.getKey();
             if(skipJdkClass && className.startsWith("java/")){
                 continue;
             }
-            for (String name : entry.getValue()) {
-                if(filteredCollector==null || !filteredCollector.contains(className, name)){
-                    fullyMethodNames.add(className+":"+name);
+            for (String methodName : entry.getValue()) {
+                if(filteredCollector==null || !(filteredCollector.contains(className, methodName) || ignoreMethodsMatcher.matching(className, methodName))){
+                    fullyMethodNames.add(className+":"+methodName);
                 }
             }
         }

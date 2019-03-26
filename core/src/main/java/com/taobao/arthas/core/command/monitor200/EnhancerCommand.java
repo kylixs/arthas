@@ -17,6 +17,7 @@ import com.taobao.arthas.core.shell.handlers.shell.QExitHandler;
 import com.taobao.arthas.core.shell.session.Session;
 import com.taobao.arthas.core.util.Constants;
 import com.taobao.arthas.core.util.LogUtil;
+import com.taobao.arthas.core.util.OptionsUtils;
 import com.taobao.arthas.core.util.affect.EnhancerAffect;
 import com.taobao.arthas.core.util.collection.MethodCollector;
 import com.taobao.arthas.core.util.matcher.CollectionMatcher;
@@ -127,6 +128,7 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
             }
 
             MethodCollector globalEnhancedMethodCollector = new MethodCollector();
+            MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.ignoreEnhanceMethods);
 
             int depth = 1;
             int maxDepth = Math.min(GlobalOptions.traceDepth, 20);
@@ -134,8 +136,8 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
                 MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
                 globalEnhancedMethodCollector.merge(enhancedMethodCollector);
                 MethodCollector visitedMethodCollector = effect.getVisitedMethodCollector();
-                CollectionMatcher newClassNameMatcher = visitedMethodCollector.getClassNameMatcher(globalEnhancedMethodCollector, true);
-                CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, true);
+                CollectionMatcher newClassNameMatcher = visitedMethodCollector.getClassNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
+                CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
                 if (newMethodNameMatcher.size() == 0){
                     break;
                 }
