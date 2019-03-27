@@ -1,6 +1,5 @@
 package com.taobao.arthas.core.view;
 
-import com.taobao.arthas.core.GlobalOptions;
 import com.taobao.arthas.core.util.StringUtils;
 import com.taobao.arthas.core.util.TraceStackOptions;
 
@@ -44,13 +43,7 @@ public class TreeView implements View {
     @Override
     public String draw() {
 
-        if (TraceStackOptions.mergeNodes) {
-            rebuildInvokeTree(root);
-        }
-
-        findMaxCostNode(root);
-
-        sortChildrenNodes(root);
+        pretty();
 
         final StringBuilder treeSB = new StringBuilder();
 
@@ -79,6 +72,27 @@ public class TreeView implements View {
         });
 
         return treeSB.toString();
+    }
+
+    private void pretty() {
+        if (TraceStackOptions.mergeNodes) {
+            rebuildInvokeTree(root);
+        }
+
+        findMaxCostNode(root);
+
+        sortChildrenNodes(root);
+    }
+
+    /**
+     * check tree depth and total cost
+     * @return
+     */
+    public boolean isLittleTree() {
+        if(Node.getCostInMillis(root.children.get(0).totalCost) < TraceStackOptions.minCost){
+            return true;
+        }
+        return false;
     }
 
     private void rebuildInvokeTree(Node node) {
@@ -171,7 +185,7 @@ public class TreeView implements View {
             if(minCost > 0){
                 for (int i = node.children.size() - 1; i >= 0; i--) {
                     Node childNode = node.children.get(i);
-                    if( Node.getCostInMillis(childNode.totalCost) < minCost ){
+                    if(!node.isRoot() && Node.getCostInMillis(childNode.totalCost) < minCost ){
                         node.children.remove(i);
                     }
                 }

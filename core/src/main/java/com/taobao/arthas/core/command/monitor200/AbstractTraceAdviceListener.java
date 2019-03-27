@@ -72,15 +72,16 @@ public class AbstractTraceAdviceListener extends ReflectAdviceListenerAdapter {
         double cost = threadLocalWatch.costInMillis();
         if (--threadBoundEntity.get().deep == 0) {
             try {
-                if (isConditionMet(command.getConditionExpress(), advice, cost) && isTopTraceMethod()) {
+                if (isConditionMet(command.getConditionExpress(), advice, cost) && !shouldIgnoreTrace()) {
                     // 满足输出条件
                     if (isLimitExceeded(command.getNumberOfLimit(), process.times().get())) {
                         // TODO: concurrency issue to abort process
                         abortProcess(process, command.getNumberOfLimit());
                     } else {
-                        process.times().incrementAndGet();
                         // TODO: concurrency issues for process.write
-                        process.write(threadBoundEntity.get().view.draw() + "\n");
+                        TreeView view = threadBoundEntity.get().view;
+                        process.write(view.draw() + "\n");
+                        process.times().incrementAndGet();
                     }
                 }
             } catch (Throwable e) {
@@ -98,15 +99,23 @@ public class AbstractTraceAdviceListener extends ReflectAdviceListenerAdapter {
      * check if the first level trace method
      * @return
      */
-    private boolean isTopTraceMethod() {
-        String rootData = threadBoundEntity.get().view.getTopTraceData();
-        String[] strs = rootData.split(":");
-        String className = strs[0];
-        String methodName = strs[1].replaceAll("\\(\\)", "");
-        if (strs.length>=2 && command.getClassNameMatcher().matching(className) && command.getMethodNameMatcher().matching(methodName)){
-            return true;
-        }
+    private boolean shouldIgnoreTrace() {
+//        String rootData = threadBoundEntity.get().view.getTopTraceData();
+//        String[] strs = rootData.split(":");
+//        String className = strs[0];
+//        String methodName = strs[1].replaceAll("\\(\\)", "");
+//        if (strs.length>=2 && command.getClassNameMatcher().matching(className) && command.getMethodNameMatcher().matching(methodName)){
+//            return false;
+//        }
 
+        //find the parent
+//        Class.forName(className);
+//
+
+        TreeView view = threadBoundEntity.get().view;
+        if(view.isLittleTree()) {
+           return true;
+        }
         return false;
     }
 }

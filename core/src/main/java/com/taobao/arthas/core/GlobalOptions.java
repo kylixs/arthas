@@ -107,7 +107,7 @@ public class GlobalOptions {
             summary = "Option to setting enhance method limits",
             description = "This option setting enhance method limits, use to prevent enhance large number of class methods, making Java process slowly."
     )
-    public static volatile int enhanceMethodLimits = 100;
+    public static volatile int enhanceMethodLimits = 150;
 
     /**
      * 是否美化Trace调用树（合并重复调用节点，动态Proxy类显示为接口类）
