@@ -48,21 +48,6 @@ public class MethodCollector {
         return classMethodMap.keySet();
     }
 
-    public CollectionMatcher getClassNameMatcher(MethodCollector filteredCollector, MethodMatcher<String> ignoreMethodsMatcher, boolean skipJdkClass){
-        Collection<String> classNames = new HashSet<String>(16);
-        for (Map.Entry<String, List<String>> entry : classMethodMap.entrySet()) {
-            String className = entry.getKey();
-            if (shouldSkipClass(skipJdkClass, className)) continue;
-            for (String methodName : entry.getValue()) {
-                if(filteredCollector==null || !(filteredCollector.contains(className, methodName) || ignoreMethodsMatcher.matching(className, methodName))){
-                    classNames.add(toNormalClassName(className));
-                    break;
-                }
-            }
-        }
-        return new CollectionMatcher(classNames);
-    }
-
     private boolean shouldSkipClass(boolean skipJdkClass, String className) {
         if (skipJdkClass && (className.startsWith("java/") && !className.equals("java/lang/reflect/InvocationHandler") )) {
             return true;
@@ -75,6 +60,7 @@ public class MethodCollector {
     }
 
     public CollectionMatcher getMethodNameMatcher(MethodCollector filteredCollector, MethodMatcher<String> ignoreMethodsMatcher, boolean skipJdkClass) {
+        Collection<String> classNames = new HashSet<String>(16);
         Collection<String> fullyMethodNames = new HashSet<String>(16);
         for (Map.Entry<String, List<String>> entry : classMethodMap.entrySet()) {
             String className = entry.getKey();
@@ -82,9 +68,13 @@ public class MethodCollector {
             for (String methodName : entry.getValue()) {
                 if(filteredCollector==null || !(filteredCollector.contains(className, methodName) || ignoreMethodsMatcher.matching(className, methodName))){
                     fullyMethodNames.add(className+":"+methodName);
+                    classNames.add(toNormalClassName(className));
                 }
             }
         }
-        return new CollectionMatcher(fullyMethodNames);
+        if(fullyMethodNames.isEmpty()){
+            return null;
+        }
+        return new CollectionMatcher(classNames, fullyMethodNames);
     }
 }

@@ -50,6 +50,8 @@ public class TraceCommand extends EnhancerCommand {
     private List<String> pathPatterns;
     private boolean skipJDKTrace;
     protected int traceDepth = 1;
+    private MethodMatcher<String> additionalMethodMatcher;
+    private boolean enhancedAdditionalCLass;
 
     @Argument(argName = "class-pattern", index = 0)
     @Description("Class name pattern, use either '.' or '/' as separator")
@@ -106,6 +108,12 @@ public class TraceCommand extends EnhancerCommand {
     public void setTraceStackPretty(String prettyParams) {
         //Don't change global settings
         OptionsUtils.parseTraceStackOptions(prettyParams);
+    }
+
+    @Option(shortName = "ec", longName = "enhance-class")
+    @Description("set additional enhance classes list. eg. 'x.y.z.Foo;x.x.MyClass:func1;'")
+    public void setAdditionalEnhanceClasses(String classes) {
+        additionalMethodMatcher = OptionsUtils.parseIgnoreMethods(classes);
     }
 
     public String getClassPattern() {
@@ -182,15 +190,18 @@ public class TraceCommand extends EnhancerCommand {
             MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
             globalEnhancedMethodCollector.merge(enhancedMethodCollector);
             MethodCollector visitedMethodCollector = effect.getVisitedMethodCollector();
-            CollectionMatcher newClassNameMatcher = visitedMethodCollector.getClassNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
-            CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
+            MethodMatcher<String> newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
             visitedMethodCollector.clear();
-            if (newMethodNameMatcher.size() == 0){
+            if(!enhancedAdditionalCLass && additionalMethodMatcher!=null){
+                enhancedAdditionalCLass = true;
+                newMethodNameMatcher = (newMethodNameMatcher==null)?additionalMethodMatcher : MethodMatchers.or(newMethodNameMatcher, additionalMethodMatcher);
+            }
+            if (newMethodNameMatcher == null){
                 break;
             }
 
             Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
-                    skipJDKTrace, newClassNameMatcher, newMethodNameMatcher, effect);
+                    skipJDKTrace, newMethodNameMatcher, newMethodNameMatcher, effect);
             process.write(format("Trace level:%d, %s\n", depth, effect));
         }
         return effect;

@@ -1,6 +1,7 @@
 package com.taobao.arthas.core.util.matcher;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -13,9 +14,15 @@ public class MethodMatchers {
     public static <T> MethodMatcher<T> and(Collection<MethodMatcher<T>> matchers){
         return new AndMethodMatcher(matchers);
     }
+    public static <T> MethodMatcher<T> and(MethodMatcher<T>... matchers){
+        return new AndMethodMatcher(Arrays.asList(matchers));
+    }
 
     public static <T> MethodMatcher<T> or(Collection<MethodMatcher<T>> matchers){
         return new OrMethodMatcher(matchers);
+    }
+    public static <T> MethodMatcher<T> or(MethodMatcher<T>... matchers){
+        return new OrMethodMatcher(Arrays.asList(matchers));
     }
 
     private static class OrMethodMatcher<T> implements MethodMatcher<T> {

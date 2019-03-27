@@ -12,12 +12,13 @@ public class WildcardMethodMatcher implements MethodMatcher<String> {
     private final String methodNamePattern;
 
     public WildcardMethodMatcher(String classNamePattern, String methodNamePattern) {
-        this.classNamePattern = classNamePattern;
+        this.classNamePattern = toNormalClassName(classNamePattern);
         this.methodNamePattern = methodNamePattern;
     }
 
     @Override
     public boolean matching(String className, String methodName) {
+        className = toNormalClassName(className);
         if(!WildcardMatcherUtils.match(className, classNamePattern,0,0)){
             return false;
         }
@@ -29,8 +30,12 @@ public class WildcardMethodMatcher implements MethodMatcher<String> {
     }
 
     @Override
-    public boolean matching(String target) {
-        return false;
+    public boolean matching(String className) {
+        //only match className
+        return WildcardMatcherUtils.match(className, classNamePattern, 0, 0);
     }
 
+    private String toNormalClassName(String className) {
+        return className.replace('/','.');
+    }
 }

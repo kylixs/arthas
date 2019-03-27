@@ -7,7 +7,17 @@ package com.taobao.arthas.core.util.matcher;
 public interface MethodMatcher<T> extends Matcher<T>{
 
     /**
+     * match className only
+     * @param target 目标字符串
+     * @return
+     */
+    @Override
+    boolean matching(T target);
+
+    /**
      * 是否匹配类和方法
      */
     boolean matching(T className, T methodName);
+
+//    boolean matchingClassName(T className);
 }

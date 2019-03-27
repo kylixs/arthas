@@ -5,27 +5,40 @@ import java.util.HashSet;
 
 public class CollectionMatcher implements Matcher<String>, MethodMatcher<String> {
 
-    private Collection<String> values;
+    //full method names: x.y.z.MyClass:func1
+    private Collection<String> fullMethodNames = new HashSet<String>();
 
-    public CollectionMatcher(Collection<String> values) {
-        this.values = new HashSet<String>(values);
+    //normal class names: x.y.z.MyClass
+    private Collection<String> classNames = new HashSet<String>();
+
+    public CollectionMatcher(Collection<String> classNames, Collection<String> fullMethodNames) {
+        for (String className : classNames) {
+            this.classNames.add(toNormalClassName(className));
+        }
+        for (String fullMethodName : fullMethodNames) {
+            this.fullMethodNames.add(toNormalClassName(fullMethodName));
+        }
     }
 
     public CollectionMatcher() {
-        values = new HashSet<String>();
+        fullMethodNames = new HashSet<String>();
     }
 
     @Override
     public boolean matching(String target) {
-        return values.contains(target);
+        return classNames.contains(target);
     }
 
-    public int size(){
-        return values.size();
+    public boolean isEmpty(){
+        return fullMethodNames==null && fullMethodNames.isEmpty();
     }
 
     @Override
     public boolean matching(String className, String methodName) {
-        return matching(className+":"+methodName);
+        return  fullMethodNames.contains(toNormalClassName(className+":"+methodName));
+    }
+
+    private String toNormalClassName(String className) {
+        return className.replace('/','.');
     }
 }
