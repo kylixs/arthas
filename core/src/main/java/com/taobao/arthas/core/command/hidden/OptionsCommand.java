@@ -181,11 +181,15 @@ public class OptionsCommand extends AnnotatedCommand {
         Object afterValue;
 
         try {
-            if(optionName.equals("trace.stack-pretty") && !OptionsUtils.parseTraceStackOptions(optionValue)){
-                process.write(format("Options[%s] value[%s] is invalid. current value [%s].\n", optionName, optionValue, String.valueOf(beforeValue)));
-                return;
+            if(optionName.equals("trace-stack-pretty")){
+                if(!OptionsUtils.parseTraceStackOptions(optionValue)) {
+                    process.write(format("Options[%s] value[%s] is invalid. current value [%s].\n", optionName, optionValue, String.valueOf(beforeValue)));
+                    return;
+                }
+                afterValue = GlobalOptions.traceStackPretty;
+            }else {
+                afterValue = FieldUtils.setFieldValue(field, type, optionValue);
             }
-            afterValue = FieldUtils.setFieldValue(field, type, optionValue);
             if(afterValue == null){
                 process.write(format("Options[%s] type[%s] not supported.\n", optionName, type.getSimpleName()));
                 return;

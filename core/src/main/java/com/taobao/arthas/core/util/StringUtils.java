@@ -6,12 +6,7 @@
 package com.taobao.arthas.core.util;
 
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Properties;
-import java.util.Set;
-import java.util.StringTokenizer;
-import java.util.TreeSet;
+import java.util.*;
 
 public abstract class StringUtils {
 
@@ -690,6 +685,20 @@ public abstract class StringUtils {
                 buf.append(separator);
             }
             buf.append(array[i]);
+        }
+        return buf.toString();
+    }
+
+    public static String join(Map<String,Object> map, String separator) {
+        if (separator == null) {
+            separator = ";";
+        }
+        int arraySize = map.size();
+        int bufSize = (arraySize == 0 ? 0 : (20 + separator.length()) * arraySize);
+        StringBuffer buf = new StringBuffer(bufSize);
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            buf.append(entry.getKey()).append("=").append(entry.getValue());
+            buf.append(separator);
         }
         return buf.toString();
     }

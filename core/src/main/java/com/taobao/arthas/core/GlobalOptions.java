@@ -120,7 +120,8 @@ public class GlobalOptions {
                     "merge-nodes=true: merge two node of the same invoking. \n" +
                     "decorate-proxy=true: change the dynamic proxy classname to interface name. \n"+
                     "top-size=5: filter sub nodes by top size. \n"+
-                    "min-cost=1: filter nodes less than min-cost value (ms). \n"
+                    "min-cost=1: filter nodes less than min-cost value (ms). \n"+
+                    "You can set partial attribute value by 'options trace-stack-pretty min-cost=0.5'. \n"
     )
     public static volatile String traceStackPretty = "merge-nodes=true;decorate-proxy=true;top-size=5;min-cost=1;";
 

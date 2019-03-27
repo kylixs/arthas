@@ -134,17 +134,7 @@ public class OptionsUtils {
     }
 
     public static Map<String, Object> getOptionValues() {
-        Map<String, Object> map = new LinkedHashMap<String, Object>();
-        try {
-            Field[] fields = GlobalOptions.class.getDeclaredFields();
-            for (Field field : fields) {
-                field.setAccessible(true);
-                map.put(field.getName(), field.get(null));
-                field.setAccessible(false);
-            }
-        } catch (Exception e) {
-        }
-        return map;
+        return getStaticFieldValues(GlobalOptions.class);
     }
 
     /**
@@ -172,29 +162,49 @@ public class OptionsUtils {
     public static boolean parseTraceStackOptions(String str){
         //com.taobao.arthas.core.GlobalOptions.traceStackPretty
         //merge=true;decorate-proxy=true;min-cost=1ms;top-size=5
-        Map<String, String> map = new HashMap<String, String>();
-        String[] strings = str.split(";");
-        for (String entry : strings) {
-            String[] vals = entry.split("=");
-            //min-cost => mincost
-            if(vals.length > 1) {
-                String key = vals[0].toLowerCase().replaceAll("-", "");
-                map.put(key, vals[1]);
-            }
-        }
-
-        Field[] fields = TraceStackOptions.class.getDeclaredFields();
-        for (Field field : fields) {
-            try {
-                String value = map.get(field.getName().toLowerCase());
-                if(value != null) {
-                    FieldUtils.setFieldValue(field, field.getType(), value);
+        try {
+            Map<String, String> map = new HashMap<String, String>();
+            String[] strings = str.split(";");
+            for (String entry : strings) {
+                String[] vals = entry.split("=");
+                //min-cost => mincost
+                if(vals.length > 1) {
+                    String key = vals[0].toLowerCase().replaceAll("-", "");
+                    map.put(key, vals[1]);
                 }
-            } catch (Exception e) {
-                return false;
             }
+
+            Field[] fields = TraceStackOptions.class.getDeclaredFields();
+            for (Field field : fields) {
+                try {
+                    String value = map.get(field.getName().toLowerCase());
+                    if(value != null) {
+                        FieldUtils.setFieldValue(field, field.getType(), value);
+                    }
+                } catch (Exception e) {
+                    return false;
+                }
+            }
+            return true;
+        } finally {
+            //refresh traceStackPretty
+            String stackOptionValue=StringUtils.join(getStaticFieldValues(TraceStackOptions.class), ";");
+            GlobalOptions.traceStackPretty = stackOptionValue;
         }
-        return true;
+    }
+
+    private static Map<String, Object> getStaticFieldValues(Class clazz) {
+        Map<String, Object> map = new LinkedHashMap<String, Object>();
+        try {
+            Field[] fields = clazz.getDeclaredFields();
+            for (Field field : fields) {
+                field.setAccessible(true);
+                map.put(field.getName(), field.get(null));
+                field.setAccessible(false);
+            }
+        } catch (Exception e) {
+        }
+        return map;
     }
 
 }
