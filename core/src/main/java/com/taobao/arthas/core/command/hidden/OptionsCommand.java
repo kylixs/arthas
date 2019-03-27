@@ -36,69 +36,103 @@ import static java.lang.String.format;
 @Name("options")
 @Summary("View and change various Arthas options")
 @Description(Constants.EXAMPLE +
-        "options ls \n"+
-        "options ls --details \n"+
-        "options get unsafe\n" +
-        "options set unsafe true\n" +
-        "options reset unsafe\n" +
-        "options reset --all\n" +
+        "options \n"+
+        "options --details \n"+
+        "options unsafe\n" +
+        "options unsafe true\n" +
+        "options unsafe true --save\n" +
+        "options --save-all\n" +
+        "options unsafe --load\n" +
+        "options --load-all\n" +
+        "options unsafe --reset\n" +
+        "options --reset-all\n" +
         Constants.WIKI + Constants.WIKI_HOME + "options")
 public class OptionsCommand extends AnnotatedCommand {
-    private String operate;
     private String optionName;
     private String optionValue;
-    private boolean isDetails;
-    private boolean isAll;
+    private boolean showDetails;
+    private boolean bReset;
+    private boolean bResetAll;
+    private boolean bSave;
+    private boolean bSaveAll;
+    private boolean bLoad;
+    private boolean bLoadAll;
 
-    @Argument(index = 0, argName = "operate", required = false)
-    @Description("Operate: ls, list, get, set, reset")
-    public void setOperate(String operate) {
-        this.operate = operate;
-    }
-
-    @Argument(index = 1, argName = "options-name", required = false)
+    @Argument(index = 0, argName = "options-name", required = false)
     @Description("Option name")
     public void setOptionName(String optionName) {
         this.optionName = optionName;
     }
 
-    @Argument(index = 2, argName = "options-value", required = false)
+    @Argument(index = 1, argName = "options-value", required = false)
     @Description("Option value")
     public void setOptionValue(String optionValue) {
         this.optionValue = optionValue;
     }
 
-    @com.taobao.middleware.cli.annotations.Option(shortName = "D", longName = "details", flag = true)
+    @com.taobao.middleware.cli.annotations.Option(shortName = "d", longName = "details", flag = true)
     @Description("Show the details of options, include summary and description")
-    public void setDetails(boolean b) {
-        isDetails = b;
+    public void setShowDetails(boolean b) {
+        showDetails = b;
     }
 
-    @com.taobao.middleware.cli.annotations.Option(shortName = "A", longName = "all", flag = true)
-    @Description("Reset all options value to default.")
-    public void setAll(boolean b) {
-        isAll = b;
+    @com.taobao.middleware.cli.annotations.Option(shortName = "r", longName = "reset", flag = true)
+    @Description("Reset the option value to default.")
+    public void setResetOption(boolean b) {
+        bReset = b;
+    }
+    
+    @com.taobao.middleware.cli.annotations.Option(shortName = "R", longName = "reset-all", flag = true)
+    @Description("Reset all option values to default.")
+    public void setResetAll(boolean b) {
+        bResetAll = b;
+    }
+
+    @com.taobao.middleware.cli.annotations.Option(shortName = "s", longName = "save", flag = true)
+    @Description("Save the option value to file.")
+    public void setSaveOption(boolean b) {
+        bSave = b;
+    }
+
+    @com.taobao.middleware.cli.annotations.Option(shortName = "S", longName = "save-all", flag = true)
+    @Description("Save all option values to file.")
+    public void setSaveAll(boolean b) {
+        bSaveAll = b;
+    }
+
+    @com.taobao.middleware.cli.annotations.Option(shortName = "l", longName = "load", flag = true)
+    @Description("Load the option value from file.")
+    public void setLoadOption(boolean b) {
+        bLoad = b;
+    }
+
+    @com.taobao.middleware.cli.annotations.Option(shortName = "L", longName = "load-all", flag = true)
+    @Description("Load all option values from file.")
+    public void setLoadAll(boolean b) {
+        bLoadAll = b;
     }
 
     @Override
     public void process(CommandProcess process) {
         try {
-            if (isShow()) {
+            if(bSaveAll){
+                saveAllOptions(process);
+            }else if(bLoadAll){
+                loadAllOptions(process);
+            }else if(bResetAll){
+                processResetAllValue(process);
+            }else if(bLoad){
+                loadOption(process);
+            }else if(bReset){
+                processResetNameValue(process);
+            }else  if (isShow()) {
                 processShow(process);
             } else if (isShowName()) {
                 processShowName(process);
             } else if(isSetName()) {
                 processChangeNameValue(process);
-            } else if(isResetAll()) {
-                if(!StringUtils.isBlank(optionName)){
-                    process.write(format("Reset all options value don't need specify option name. [%s]\n", optionName));
-                    return;
-                }
-                processResetAllValue(process);
-            } else if(isResetName()) {
-                processResetNameValue(process);
             } else {
-                process.write(format("Options [%s] arguments is invalid, see also 'options -h'.\n", operate));
+                process.write("Options arguments is invalid, see also 'options -h'.\n");
             }
         } catch (Throwable t) {
             // ignore
@@ -108,16 +142,24 @@ public class OptionsCommand extends AnnotatedCommand {
     }
 
     private void processShow(CommandProcess process) throws IllegalAccessException {
+        if(bSave){
+            process.write("Missing option name and value, see also 'options -h'.\n");
+            return;
+        }
         Collection<Field> fields = findOptions(new RegexMatcher(".*"));
-        process.write(RenderUtil.render(isDetails?drawShowDetailsTable(fields):drawShowTable(fields), process.width()));
+        process.write(RenderUtil.render(showDetails ?drawShowDetailsTable(fields):drawShowTable(fields), process.width()));
     }
 
     private void processShowName(CommandProcess process) throws IllegalAccessException {
+        if(bSave){
+            process.write(format("Missing option value for [%s], see also 'options -h'.\n", optionName));
+            return;
+        }
         Collection<Field> fields = findOptions(new EqualsMatcher<String>(optionName));
         if(fields.isEmpty()){
             process.write(format("options[%s] not found.\n", optionName));
         }else {
-            if(isDetails){
+            if(showDetails){
                 process.write(RenderUtil.render(drawShowDetailsTable(fields), process.width()));
             }else {
 //                Field field = fields.iterator().next();
@@ -128,7 +170,7 @@ public class OptionsCommand extends AnnotatedCommand {
     }
 
     private void processChangeNameValue(CommandProcess process) throws IllegalAccessException {
-        Field field = findFieldByOptionName();
+        Field field = findFieldByOptionName(optionName);
         if (field == null) {
             process.write(format("options[%s] not found.\n", optionName));
             return;
@@ -139,11 +181,9 @@ public class OptionsCommand extends AnnotatedCommand {
         Object afterValue;
 
         try {
-            if(optionName.equals("trace.stack-pretty")){
-                if(!OptionsUtils.parseTraceStackOptions(optionValue)){
-                    process.write(format("Options[%s] value[%s] is invalid. current value [%s].\n", optionName, optionValue, String.valueOf(beforeValue)));
-                    return;
-                }
+            if(optionName.equals("trace.stack-pretty") && !OptionsUtils.parseTraceStackOptions(optionValue)){
+                process.write(format("Options[%s] value[%s] is invalid. current value [%s].\n", optionName, optionValue, String.valueOf(beforeValue)));
+                return;
             }
             afterValue = FieldUtils.setFieldValue(field, type, optionValue);
             if(afterValue == null){
@@ -151,7 +191,9 @@ public class OptionsCommand extends AnnotatedCommand {
                 return;
             }
 
-            saveOptions();
+            if(bSave){
+                saveOption(process, optionName);
+            }
         } catch (Throwable t) {
             process.write(format("Cannot cast option value[%s] to type[%s].\n", optionValue, type.getSimpleName()));
             return;
@@ -166,32 +208,73 @@ public class OptionsCommand extends AnnotatedCommand {
         process.write(RenderUtil.render(table, process.width()));
     }
 
-    private void saveOptions() {
-        OptionsUtils.saveOptions(new File(com.taobao.arthas.core.util.Constants.OPTIONS_FILE));
+    private void saveAllOptions(CommandProcess process) {
+        if(!StringUtils.isBlank(optionName)){
+            process.write(format("Save all options value don't need specify option name. [%s]\n", optionName));
+            return;
+        }
+        OptionsUtils.saveAllOptions(new File(com.taobao.arthas.core.util.Constants.OPTIONS_FILE));
     }
 
-    private void processResetAllValue(CommandProcess process) throws IllegalAccessException {
-        OptionsUtils.resetAllOptionValues();
-        processShow(process);
-        saveOptions();
-    }
-
-    private void processResetNameValue(CommandProcess process) throws IllegalAccessException {
-        Field field = findFieldByOptionName();
-        if (field == null) {
+    private void saveOption(CommandProcess process, String optionName) {
+        String fieldName = findFieldNameByOptionName(optionName);
+        if (fieldName == null) {
             process.write(format("options[%s] not found.\n", optionName));
             return;
         }
-        boolean result = OptionsUtils.resetOptionValue(field.getName());
+        OptionsUtils.saveOption(fieldName, new File(com.taobao.arthas.core.util.Constants.OPTIONS_FILE));
+    }
+
+    private void loadAllOptions(CommandProcess process) {
+        if(!StringUtils.isBlank(optionName)){
+            process.write(format("Load all options value don't need specify option name. [%s]\n", optionName));
+            return;
+        }
+        OptionsUtils.loadAllOptions(new File(com.taobao.arthas.core.util.Constants.OPTIONS_FILE));
+    }
+
+    private void loadOption(CommandProcess process) {
+        if(!StringUtils.isBlank(optionValue)){
+            process.write(format("Load the option [%s] don't need its value [%s].\n", optionName, optionValue));
+            return;
+        }
+        String fieldName = findFieldNameByOptionName(optionName);
+        if (fieldName == null) {
+            process.write(format("options[%s] not found.\n", optionName));
+            return;
+        }
+        OptionsUtils.loadOption(fieldName, new File(com.taobao.arthas.core.util.Constants.OPTIONS_FILE));
+    }
+
+    private void processResetAllValue(CommandProcess process) throws IllegalAccessException {
+        if(!StringUtils.isBlank(optionName)){
+            process.write(format("Reset all options value don't need specify option name. [%s]\n", optionName));
+            return;
+        }
+        OptionsUtils.resetAllOptionValues();
+        processShow(process);
+    }
+
+    private void processResetNameValue(CommandProcess process) throws IllegalAccessException {
+        if(!StringUtils.isBlank(optionValue)){
+            process.write(format("Reset the option [%s] don't need its value [%s].\n", optionName, optionValue));
+            return;
+        }
+
+        String fieldName = findFieldNameByOptionName(optionName);
+        if (fieldName == null) {
+            process.write(format("options[%s] not found.\n", optionName));
+            return;
+        }
+        boolean result = OptionsUtils.resetOptionValue(fieldName);
         if(!result){
             process.write(format("Reset option [%s] failed.\n", optionName));
         }else {
             processShowName(process);
         }
-        saveOptions();
     }
 
-    private Field findFieldByOptionName() {
+    private Field findFieldByOptionName(String optionName) {
         Collection<Field> fields = findOptions(new EqualsMatcher<String>(optionName));
         // name not exists
         if (fields.isEmpty()) {
@@ -200,34 +283,30 @@ public class OptionsCommand extends AnnotatedCommand {
         return fields.iterator().next();
     }
 
+    private String findFieldNameByOptionName(String optionName) {
+        Field field = findFieldByOptionName(optionName);
+        if(field != null){
+            return field.getName();
+        }
+        return null;
+    }
+
     /*
      * 判断当前动作是否需要展示整个options
      */
     private boolean isShow() {
-        return "ls".equals(operate) || "list".equals(operate) || StringUtils.isBlank(operate);
+        return StringUtils.isBlank(optionName) && StringUtils.isBlank(optionValue);
     }
 
     /*
      * 判断当前动作是否需要展示某个Name的值
      */
     private boolean isShowName() {
-        return "get".equals(operate) && !StringUtils.isBlank(optionName);
+        return !StringUtils.isBlank(optionName) && StringUtils.isBlank(optionValue);
     }
 
     private boolean isSetName() {
-        return "set".equals(operate) && !StringUtils.isBlank(optionName) && !StringUtils.isBlank(optionValue);
-    }
-
-    private boolean isReset() {
-        return "reset".equals(operate);
-    }
-
-    private boolean isResetName() {
-        return isReset() && !isAll && !StringUtils.isBlank(optionName);
-    }
-
-    private boolean isResetAll() {
-        return isReset() && isAll;
+        return !StringUtils.isBlank(optionName) && !StringUtils.isBlank(optionValue);
     }
 
     private Collection<Field> findOptions(Matcher optionNameMatcher) {

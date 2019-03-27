@@ -19,15 +19,60 @@ public class OptionsUtils {
 
     private static Map<String, Object> defaultOptionValues = getOptionValues();
 
-    public static void saveOptions(File file) {
+    public static void saveAllOptions(File file) {
+        Map<String, Object> map = getOptionValues();
+        saveOptions(map, file);
+    }
+
+    public static boolean saveOption(String fieldName, File file) {
+        Map<String, Object> currentValues = getOptionValues();
+        Object fieldValue = currentValues.get(fieldName);
+        if(fieldValue == null){
+            return false;
+        }
+
+        //read origin option values from file, update this field only
+        Map<String, Object> map = readOptions(file);
+        map.put(fieldName, fieldValue);
+        saveOptions(map, file);
+        return true;
+    }
+
+    public static void loadAllOptions(File file){
+        Map<String, Object> map = readOptions(file);
+        setOptionValues(map);
+    }
+
+    public static void loadOption(String fieldName, File file) {
+        Map<String, Object> map = readOptions(file);
+        //only update this field value
+        Map<String, Object> newMap = new HashMap<String, Object>();
+        newMap.put(fieldName, map.get(fieldName));
+        setOptionValues(newMap);
+    }
+
+    public static boolean resetOptionValue(String fieldName){
+        Object value = defaultOptionValues.get(fieldName);
+        if(value == null){
+            return false;
+        }
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put(fieldName, value);
+        setOptionValues(defaultOptionValues);
+        return true;
+    }
+
+    public static boolean resetAllOptionValues(){
+        setOptionValues(defaultOptionValues);
+        return true;
+    }
+
+    private static void saveOptions(Map<String, Object> map, File file) {
         OutputStream out = null;
         try {
-            Map<String, Object> map = getOptionValues();
             String json = JSON.toJSONString(map, true);
             out = FileUtils.openOutputStream(file, false);
             out.write(json.getBytes("utf-8"));
-
-            parseTraceStackOptions(GlobalOptions.traceStackPretty);
         } catch (Exception e) {
             // ignore
         } finally {
@@ -41,7 +86,7 @@ public class OptionsUtils {
         }
     }
 
-    public static void loadOptions(File file){
+    private static Map<String, Object> readOptions(File file) {
         BufferedReader br = null;
         StringBuilder sbJson = new StringBuilder(128);
         try {
@@ -52,7 +97,7 @@ public class OptionsUtils {
             }
             //convert json string to map
             Map<String, Object> map = JSON.parseObject(sbJson.toString());
-            setOptionValues(map);
+            return map;
         } catch (Exception e) {
             // ignore
         } finally {
@@ -64,6 +109,42 @@ public class OptionsUtils {
                 // ignore
             }
         }
+        return null;
+    }
+
+    private static void setOptionValues(Map<String, Object> map) {
+        try {
+            Field[] fields = GlobalOptions.class.getDeclaredFields();
+            for (Field field : fields) {
+                try {
+                    Object value = map.get(field.getName());
+                    if(value != null) {
+                        field.setAccessible(true);
+                        field.set(null, value);
+                    }
+                } catch (Exception e) {
+                }finally {
+                    field.setAccessible(false);
+                }
+            }
+
+            parseTraceStackOptions(GlobalOptions.traceStackPretty);
+        } catch (Exception e) {
+        }
+    }
+
+    public static Map<String, Object> getOptionValues() {
+        Map<String, Object> map = new LinkedHashMap<String, Object>();
+        try {
+            Field[] fields = GlobalOptions.class.getDeclaredFields();
+            for (Field field : fields) {
+                field.setAccessible(true);
+                map.put(field.getName(), field.get(null));
+                field.setAccessible(false);
+            }
+        } catch (Exception e) {
+        }
+        return map;
     }
 
     /**
@@ -106,7 +187,9 @@ public class OptionsUtils {
         for (Field field : fields) {
             try {
                 String value = map.get(field.getName().toLowerCase());
-                FieldUtils.setFieldValue(field, field.getType(), value);
+                if(value != null) {
+                    FieldUtils.setFieldValue(field, field.getType(), value);
+                }
             } catch (Exception e) {
                 return false;
             }
@@ -114,60 +197,4 @@ public class OptionsUtils {
         return true;
     }
 
-    private static void setOptionValues(Map<String, Object> map) {
-        try {
-            Field[] fields = GlobalOptions.class.getDeclaredFields();
-            for (Field field : fields) {
-                try {
-                    field.setAccessible(true);
-                    Object value = map.get(field.getName());
-                    if(value != null) {
-                        field.set(null, value);
-                    }
-                } catch (Exception e) {
-                }finally {
-                    field.setAccessible(false);
-                }
-            }
-
-            parseTraceStackOptions(GlobalOptions.traceStackPretty);
-        } catch (Exception e) {
-        }
-    }
-
-    public static Map<String, Object> getOptionValues() {
-        Map<String, Object> map = new LinkedHashMap<String, Object>();
-        try {
-            Field[] fields = GlobalOptions.class.getDeclaredFields();
-            for (Field field : fields) {
-                field.setAccessible(true);
-                map.put(field.getName(), field.get(null));
-                field.setAccessible(false);
-            }
-        } catch (Exception e) {
-        }
-        return map;
-    }
-
-    public static boolean resetOptionValue(String fieldName){
-        try {
-            Field field = GlobalOptions.class.getDeclaredField(fieldName);
-            if(field != null) {
-                field.setAccessible(true);
-                Object value = defaultOptionValues.get(fieldName);
-                if(value != null) {
-                    field.set(null, value);
-                    return true;
-                }
-                field.setAccessible(false);
-            }
-        } catch (Exception e) {
-        }
-        return false;
-    }
-
-    public static boolean resetAllOptionValues(){
-        setOptionValues(defaultOptionValues);
-        return true;
-    }
 }

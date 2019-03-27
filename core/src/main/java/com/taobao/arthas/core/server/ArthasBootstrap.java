@@ -115,7 +115,7 @@ public class ArthasBootstrap {
             UserStatUtil.arthasStart();
 
             //load GlobalOptions from file
-            OptionsUtils.loadOptions(new File(com.taobao.arthas.core.util.Constants.OPTIONS_FILE));
+            OptionsUtils.loadAllOptions(new File(com.taobao.arthas.core.util.Constants.OPTIONS_FILE));
 
             logger.info("as-server started in {} ms", System.currentTimeMillis() - start );
         } catch (Throwable e) {
