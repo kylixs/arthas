@@ -49,6 +49,7 @@ public class TraceCommand extends EnhancerCommand {
     private int numberOfLimit = 100;
     private List<String> pathPatterns;
     private boolean skipJDKTrace;
+    protected int traceDepth = 1;
 
     @Argument(argName = "class-pattern", index = 0)
     @Description("Class name pattern, use either '.' or '/' as separator")
@@ -90,6 +91,21 @@ public class TraceCommand extends EnhancerCommand {
     @Description("skip jdk method trace")
     public void setSkipJDKTrace(boolean skipJDKTrace) {
         this.skipJDKTrace = skipJDKTrace;
+    }
+
+    @Option(shortName = "d", longName = "depth")
+    @Description("set trace depth")
+    public void setTraceDepth(int traceDepth) {
+        if(traceDepth > 0 ) {
+            this.traceDepth = Math.min(traceDepth, GlobalOptions.traceMaxDepth);
+        }
+    }
+
+    @Option(shortName = "sp", longName = "stack-pretty")
+    @Description("set trace stack pretty params")
+    public void setTraceStackPretty(String prettyParams) {
+        //Don't change global settings
+        OptionsUtils.parseTraceStackOptions(prettyParams);
     }
 
     public String getClassPattern() {
@@ -157,7 +173,7 @@ public class TraceCommand extends EnhancerCommand {
         MethodCollector globalEnhancedMethodCollector = new MethodCollector();
         MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.traceIgnoredMethods);
         int depth = 1;
-        int maxDepth = Math.min(GlobalOptions.traceMaxDepth, 5);
+        int maxDepth = Math.min(this.traceDepth, 10);
         process.write(format("Trace level:%d, %s\n", depth, effect));
         while(++depth <= maxDepth){
             if(isExceedEnhanceMethodLimit(effect)){
