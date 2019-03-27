@@ -52,9 +52,7 @@ public class MethodCollector {
         Collection<String> classNames = new HashSet<String>(16);
         for (Map.Entry<String, List<String>> entry : classMethodMap.entrySet()) {
             String className = entry.getKey();
-            if(skipJdkClass && className.startsWith("java/")){
-                continue;
-            }
+            if (shouldSkipClass(skipJdkClass, className)) continue;
             for (String methodName : entry.getValue()) {
                 if(filteredCollector==null || !(filteredCollector.contains(className, methodName) || ignoreMethodsMatcher.matching(className, methodName))){
                     classNames.add(toNormalClassName(className));
@@ -65,6 +63,13 @@ public class MethodCollector {
         return new CollectionMatcher(classNames);
     }
 
+    private boolean shouldSkipClass(boolean skipJdkClass, String className) {
+        if (skipJdkClass && (className.startsWith("java/") && !className.equals("java/lang/reflect/InvocationHandler") )) {
+            return true;
+        }
+        return false;
+    }
+
     private String toNormalClassName(String className) {
         return className.replace('/','.');
     }
@@ -73,9 +78,7 @@ public class MethodCollector {
         Collection<String> fullyMethodNames = new HashSet<String>(16);
         for (Map.Entry<String, List<String>> entry : classMethodMap.entrySet()) {
             String className = entry.getKey();
-            if(skipJdkClass && className.startsWith("java/")){
-                continue;
-            }
+            if (shouldSkipClass(skipJdkClass, className)) continue;
             for (String methodName : entry.getValue()) {
                 if(filteredCollector==null || !(filteredCollector.contains(className, methodName) || ignoreMethodsMatcher.matching(className, methodName))){
                     fullyMethodNames.add(className+":"+methodName);
