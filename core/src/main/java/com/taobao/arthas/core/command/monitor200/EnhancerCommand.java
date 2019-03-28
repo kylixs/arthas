@@ -36,6 +36,7 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
 
     protected Matcher classNameMatcher;
     protected MethodMatcher methodNameMatcher;
+    protected boolean bExceedEnhanceMethodLimit;
 
     /**
      * 类名匹配
@@ -140,8 +141,7 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
 
             process.write(effect + "\n");
 
-            if(isExceedEnhanceMethodLimit(effect)){
-                process.write(format("Exceed enhance method limits:%d\n", GlobalOptions.enhanceMethodLimits));
+            if(bExceedEnhanceMethodLimit){
                 process.end();
             }
         } catch (UnmodifiableClassException e) {
@@ -154,8 +154,13 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
         }
     }
 
-    protected boolean isExceedEnhanceMethodLimit(EnhancerAffect effect) {
-        return effect.mCnt() >= GlobalOptions.enhanceMethodLimits;
+    protected boolean checkEnhanceMethodLimits(CommandProcess process, int n) {
+        if(n >= GlobalOptions.enhanceMethodLimits){
+            process.write(format("Exceed enhance method limits: %d >= %d\n", n, GlobalOptions.enhanceMethodLimits));
+            this.bExceedEnhanceMethodLimit = true;
+            return true;
+        }
+        return false;
     }
 
     protected EnhancerAffect onEnhancerResult(CommandProcess process, int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect) throws UnmodifiableClassException {

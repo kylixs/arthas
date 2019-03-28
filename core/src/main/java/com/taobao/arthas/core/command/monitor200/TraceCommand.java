@@ -183,20 +183,20 @@ public class TraceCommand extends EnhancerCommand {
         int maxDepth = Math.min(this.traceDepth, 10);
         process.write(format("Erace level:%d, %s\n", depth, effect));
         while(++depth <= maxDepth){
-            if (!enhanceMethods(lock, inst, listener, skipJDKTrace, effect, globalEnhancedMethodCollector, ignoreMethodsMatcher)) {
+            if (!enhanceMethods(process,lock, inst, listener, skipJDKTrace, effect, globalEnhancedMethodCollector, ignoreMethodsMatcher)) {
                 break;
             }
             process.write(format("Trace level:%d, %s\n", depth, effect));
         }
 
         //enhance additional class methods
-        if(additionalMethodMatcher!=null && !isExceedEnhanceMethodLimit(effect)){
+        if(additionalMethodMatcher!=null && !bExceedEnhanceMethodLimit){
             depth = 1;
             Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
                     skipJDKTrace, additionalMethodMatcher, additionalMethodMatcher, effect);
             process.write(format("Trace additional enhance class methods:%d, %s\n", depth, effect));
             while(++depth <= maxDepth) {
-                if (!enhanceMethods(lock, inst, listener, skipJDKTrace, effect, globalEnhancedMethodCollector, ignoreMethodsMatcher)) {
+                if (!enhanceMethods(process, lock, inst, listener, skipJDKTrace, effect, globalEnhancedMethodCollector, ignoreMethodsMatcher)) {
                     break;
                 }
                 process.write(format("Trace additional class methods level:%d, %s\n", depth, effect));
@@ -206,16 +206,16 @@ public class TraceCommand extends EnhancerCommand {
         return effect;
     }
 
-    private boolean enhanceMethods(int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect, MethodCollector globalEnhancedMethodCollector, MethodMatcher<String> ignoreMethodsMatcher) throws UnmodifiableClassException {
-        if(isExceedEnhanceMethodLimit(effect)){
-            return false;
-        }
+    private boolean enhanceMethods(CommandProcess process, int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect, MethodCollector globalEnhancedMethodCollector, MethodMatcher<String> ignoreMethodsMatcher) throws UnmodifiableClassException {
         MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
         globalEnhancedMethodCollector.merge(enhancedMethodCollector);
         MethodCollector visitedMethodCollector = effect.getVisitedMethodCollector();
-        MethodMatcher<String> newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
+        CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
         visitedMethodCollector.clear();
         if (newMethodNameMatcher == null){
+            return false;
+        }
+        if(checkEnhanceMethodLimits(process, effect.mCnt() + newMethodNameMatcher.size())){
             return false;
         }
 

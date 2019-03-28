@@ -33,6 +33,10 @@ public class CollectionMatcher implements Matcher<String>, MethodMatcher<String>
         return fullMethodNames==null && fullMethodNames.isEmpty();
     }
 
+    public int size(){
+        return fullMethodNames.size();
+    }
+
     @Override
     public boolean matching(String className, String methodName) {
         return  fullMethodNames.contains(toNormalClassName(className+":"+methodName));
