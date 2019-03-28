@@ -117,10 +117,11 @@ public class GlobalOptions {
             summary = "Option to prettify trace command output call stack",
             description = "This option enables to prettify trace command output call stack. " +
                     "Using a semicolon ';' to split multiple values, eg. merge-nodes=true;decorate-proxy=true;min-cost=1;top-size=5 .\n" +
+                    "min-cost=1: filter nodes less than min-cost value (ms). \n"+
                     "merge-nodes=true: merge two node of the same invoking. \n" +
                     "decorate-proxy=true: change the dynamic proxy classname to interface name. \n"+
+                    "sort-nodes=true: sort sub nodes by total cost desc. \n"+
                     "top-size=5: filter sub nodes by top size. \n"+
-                    "min-cost=1: filter nodes less than min-cost value (ms). \n"+
                     "You can set partial attribute value by 'options trace-stack-pretty min-cost=0.5'. \n"
     )
     public static volatile String traceStackPretty = "merge-nodes=true;decorate-proxy=true;top-size=5;min-cost=1;";
@@ -144,6 +145,6 @@ public class GlobalOptions {
             description = "This option setting ignore methods of all enhance command (eg. trace, watch, monitor)." +
                     "Using a semicolon ';' to split multiple values. eg. *StringUtils;*FileUtils;*FooClass:methodName;"
     )
-    public static volatile String traceIgnoredMethods = "*StringUtils;org.springframework.util.*;";
+    public static volatile String traceIgnoredMethods = "*StringUtils;org.springframework.util.*;ch.qos.logback.*;";
 
 }

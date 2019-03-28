@@ -81,7 +81,7 @@ public class TreeView implements View {
 
         findMaxCostNode(root);
 
-        sortChildrenNodes(root);
+        sortAndFilterChildrenNodes(root);
     }
 
     /**
@@ -100,8 +100,11 @@ public class TreeView implements View {
         if(node.parent != null && shouldMergeNodes(node, node.children)){
             Node childNode = node.children.get(0);
             //replace dynamic proxy className with parentNode
-            if(TraceStackOptions.decorateProxy && childNode.data.startsWith("com.sun.proxy.$Proxy")){
-                childNode.setData(node.data);
+//            if(TraceStackOptions.decorateProxy && childNode.data.startsWith("com.sun.proxy.$Proxy")){
+//                childNode.setData(node.data);
+//            }
+            if(!childNode.data.equals(node.data)){
+                childNode.data += " ["+node.data+"]";
             }
             node.parent.replaceChild(node, childNode);
             rebuildInvokeTree(childNode);
@@ -171,8 +174,11 @@ public class TreeView implements View {
      * 对儿子节点按照cost时间排序
      * @param node
      */
-    private void sortChildrenNodes(Node node) {
-        if(!node.isLeaf()){
+    private void sortAndFilterChildrenNodes(Node node) {
+        if(node.isLeaf()){
+           return;
+        }
+        if(TraceStackOptions.sortNodes) {
             //sort by totalCost desc
             Collections.sort(node.children, new Comparator<Node>() {
                 @Override
@@ -181,27 +187,27 @@ public class TreeView implements View {
                 }
             });
 
-            double minCost = TraceStackOptions.minCost;
-            if(minCost > 0){
-                for (int i = node.children.size() - 1; i >= 0; i--) {
-                    Node childNode = node.children.get(i);
-                    if(!node.isRoot() && Node.getCostInMillis(childNode.totalCost) < minCost ){
-                        node.children.remove(i);
-                    }
-                }
-            }
-
             int outputLines = TraceStackOptions.topSize;
-            if(outputLines > 1){
+            if (outputLines > 1) {
                 //remove n+1 children nodes ..
                 for (int i = node.children.size() - 1; i >= outputLines; i--) {
                     node.children.remove(i);
                 }
             }
+        }
 
-            for (Node child : node.children) {
-                sortChildrenNodes(child);
+        double minCost = TraceStackOptions.minCost;
+        if(minCost > 0){
+            for (int i = node.children.size() - 1; i >= 0; i--) {
+                Node childNode = node.children.get(i);
+                if(!node.isRoot() && Node.getCostInMillis(childNode.totalCost) < minCost ){
+                    node.children.remove(i);
+                }
             }
+        }
+
+        for (Node child : node.children) {
+            sortAndFilterChildrenNodes(child);
         }
     }
 
