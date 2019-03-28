@@ -17,6 +17,7 @@ import com.taobao.arthas.core.shell.handlers.shell.QExitHandler;
 import com.taobao.arthas.core.shell.session.Session;
 import com.taobao.arthas.core.util.Constants;
 import com.taobao.arthas.core.util.LogUtil;
+import com.taobao.arthas.core.util.OptionsUtils;
 import com.taobao.arthas.core.util.affect.EnhancerAffect;
 import com.taobao.arthas.core.util.matcher.Matcher;
 import com.taobao.arthas.core.util.matcher.MethodMatcher;
@@ -37,6 +38,7 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
     protected Matcher classNameMatcher;
     protected MethodMatcher methodNameMatcher;
     protected boolean bExceedEnhanceMethodLimit;
+    protected MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.traceIgnoredMethods);
 
     /**
      * 类名匹配
@@ -114,7 +116,7 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
 
             EnhancerAffect effect = new EnhancerAffect();
             Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable, skipJDKTrace,
-                    getClassNameMatcher(), getMethodNameMatcher(), effect);
+                    getClassNameMatcher(), getMethodNameMatcher(), ignoreMethodsMatcher, effect);
 
             if (effect.cCnt() == 0 || effect.mCnt() == 0) {
                 // no class effected

@@ -60,8 +60,7 @@ public class TraceCommand extends EnhancerCommand {
     private int lock;
     private Instrumentation inst;
     private EnhancerAffect effect;
-    MethodCollector globalEnhancedMethodCollector = new MethodCollector();
-    MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.traceIgnoredMethods);
+    protected MethodCollector globalEnhancedMethodCollector = new MethodCollector();
 
     @Argument(argName = "class-pattern", index = 0)
     @Description("Class name pattern, use either '.' or '/' as separator")
@@ -231,7 +230,7 @@ public class TraceCommand extends EnhancerCommand {
         if(additionalMethodMatcher!=null && !bExceedEnhanceMethodLimit){
             depth = 1;
             Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
-                    skipJDKTrace, additionalMethodMatcher, additionalMethodMatcher, effect);
+                    skipJDKTrace, additionalMethodMatcher, additionalMethodMatcher, ignoreMethodsMatcher, effect);
             globalEnhancedMethodCollector.merge(effect.getEnhancedMethodCollector());
             process.write(format("Trace additional enhance class methods:%d, %s\n", depth, effect));
             while(++depth <= additionalTraceDepth) {
@@ -260,7 +259,7 @@ public class TraceCommand extends EnhancerCommand {
         }
 
         Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
-                skipJDKTrace, newMethodNameMatcher, newMethodNameMatcher, effect);
+                skipJDKTrace, newMethodNameMatcher, newMethodNameMatcher, ignoreMethodsMatcher, effect);
 
         MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
         globalEnhancedMethodCollector.merge(enhancedMethodCollector);
@@ -308,21 +307,21 @@ public class TraceCommand extends EnhancerCommand {
                 return ;
             }
 
-            CollectionMatcher newMethodNameMatcher = methodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, null, true);
+            CollectionMatcher newMethodNameMatcher = methodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
             if(newMethodNameMatcher == null || newMethodNameMatcher.size() == 0){
                 return;
             }
-            process.write(format("Visited new methods: %d\n",newMethodNameMatcher.size()));
+            process.write("Visited new methods: "+newMethodNameMatcher.size()+"\n");
             if(checkEnhanceMethodLimits(process, effect.mCnt() + newMethodNameMatcher.size())){
                 return;
             }
             globalEnhancedMethodCollector.merge(methodCollector);
             effect.getVisitedMethodCollector().clear();
             Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
-                    skipJDKTrace, newMethodNameMatcher, newMethodNameMatcher, effect);
+                    skipJDKTrace, newMethodNameMatcher, newMethodNameMatcher, ignoreMethodsMatcher, effect);
             globalEnhancedMethodCollector.merge(effect.getEnhancedMethodCollector());
 
-            process.write(format("Enhance total methods, %s\n", effect) );
+            process.write("Enhance total methods, "+effect+"\n" );
         } catch (UnmodifiableClassException e) {
             process.write("Enhance new methods failed: "+e.toString());
             e.printStackTrace();

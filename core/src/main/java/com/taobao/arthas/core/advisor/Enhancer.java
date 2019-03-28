@@ -219,15 +219,17 @@ public class Enhancer implements ClassFileTransformer {
      * 是否需要过滤的类
      *
      * @param classes 类集合
+     * @param ignoreMethodsMatcher
      */
-    private static void filter(Set<Class<?>> classes) {
+    private static void filter(Set<Class<?>> classes, MethodMatcher<String> ignoreMethodsMatcher) {
         final Iterator<Class<?>> it = classes.iterator();
         while (it.hasNext()) {
             final Class<?> clazz = it.next();
             if (null == clazz
                     || isSelf(clazz)
                     || isUnsafeClass(clazz)
-                    || isUnsupportedClass(clazz)) {
+                    || isUnsupportedClass(clazz)
+                    || ignoreMethodsMatcher.matching(clazz.getName())) {
                 it.remove();
             }
         }
@@ -268,6 +270,7 @@ public class Enhancer implements ClassFileTransformer {
      * @param isTracing         可跟踪方法调用
      * @param classNameMatcher  类名匹配
      * @param methodNameMatcher 方法名匹配
+     * @param ignoreMethodsMatcher
      * @return 增强影响范围
      * @throws UnmodifiableClassException 增强失败
      */
@@ -278,7 +281,7 @@ public class Enhancer implements ClassFileTransformer {
             final boolean skipJDKTrace,
             final Matcher classNameMatcher,
             final MethodMatcher methodNameMatcher,
-            final EnhancerAffect affect) throws UnmodifiableClassException {
+            MethodMatcher<String> ignoreMethodsMatcher, final EnhancerAffect affect) throws UnmodifiableClassException {
 
         // 获取需要增强的类集合
         final Set<Class<?>> enhanceClassSet = GlobalOptions.isDisableSubClass
@@ -286,7 +289,7 @@ public class Enhancer implements ClassFileTransformer {
                 : SearchUtils.searchSubClass(inst, SearchUtils.searchClass(inst, classNameMatcher));
 
         // 过滤掉无法被增强的类
-        filter(enhanceClassSet);
+        filter(enhanceClassSet, ignoreMethodsMatcher);
 
         // 构建增强器
         final Enhancer enhancer = new Enhancer(adviceId, isTracing, skipJDKTrace, enhanceClassSet, methodNameMatcher, affect);

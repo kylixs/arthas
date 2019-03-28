@@ -145,6 +145,6 @@ public class GlobalOptions {
             description = "This option setting ignore methods of all enhance command (eg. trace, watch, monitor)." +
                     "Using a semicolon ';' to split multiple values. eg. *StringUtils;*FileUtils;*FooClass:methodName;"
     )
-    public static volatile String traceIgnoredMethods = "*StringUtils;org.springframework.util.*;ch.qos.logback.*;";
+    public static volatile String traceIgnoredMethods = "*StringUtils;org.springframework.util.*;ch.qos.logback.*;com.opensymphony.xwork2.ognl.*;";
 
 }
