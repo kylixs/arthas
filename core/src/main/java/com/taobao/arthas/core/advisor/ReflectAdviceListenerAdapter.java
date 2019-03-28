@@ -10,6 +10,9 @@ import org.objectweb.asm.Type;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 反射通知适配器<br/>
@@ -17,6 +20,9 @@ import java.lang.reflect.Method;
  * 当然性能开销要比普通监听器高许多
  */
 public abstract class ReflectAdviceListenerAdapter implements AdviceListener {
+
+    private Map<ClassLoader,Map<String, Class>> classCache = new ConcurrentHashMap<ClassLoader, Map<String, Class>>();
+    private Map<Class, Map<String, Map<Integer,Method>>> methodCache = new ConcurrentHashMap<Class, Map<String, Map<Integer, Method>>>();
 
     @Override
     public void create() {
@@ -35,7 +41,20 @@ public abstract class ReflectAdviceListenerAdapter implements AdviceListener {
     }
 
     private Class<?> toClass(ClassLoader loader, String className) throws ClassNotFoundException {
-        return Class.forName(StringUtils.normalizeClassName(className), true, toClassLoader(loader));
+        loader = toClassLoader(loader);
+        //fast two level cache
+        Map<String, Class> classMap = classCache.get(loader);
+        if(classMap == null){
+            classMap = new ConcurrentHashMap<String, Class>();
+            classCache.put(loader, classMap);
+        }
+        //class cache
+        Class clazz = classMap.get(className);
+        if(clazz == null){
+            clazz = Class.forName(StringUtils.normalizeClassName(className), true, loader);
+            classMap.put(className, clazz);
+        }
+        return clazz;
     }
 
     private ArthasMethod toMethod(ClassLoader loader, Class<?> clazz, String methodName, String methodDesc)
@@ -109,7 +128,27 @@ public abstract class ReflectAdviceListenerAdapter implements AdviceListener {
     }
 
     private Method toMethod(Class<?> clazz, String methodName, Class<?>[] argClasses) throws NoSuchMethodException {
-        return clazz.getDeclaredMethod(methodName, argClasses);
+        //fast three level cache
+        //Class
+        Map<String, Map<Integer, Method>> methodNameMap = methodCache.get(clazz);
+        if (methodNameMap == null) {
+            methodNameMap = new ConcurrentHashMap<String, Map<Integer, Method>>();
+            methodCache.put(clazz, methodNameMap);
+        }
+        //methodName
+        Map<Integer, Method> methodMap = methodNameMap.get(methodName);
+        if (methodMap == null) {
+            methodMap = new ConcurrentHashMap<Integer, Method>();
+            methodNameMap.put(methodName, methodMap);
+        }
+        //calc args id
+        Integer argsId = Arrays.hashCode(argClasses);
+        Method method = methodMap.get(argsId);
+        if (method == null) {
+            method = clazz.getDeclaredMethod(methodName, argClasses);
+            methodMap.put(argsId, method);
+        }
+        return method;
     }
 
     private Constructor<?> toConstructor(Class<?> clazz, Class<?>[] argClasses) throws NoSuchMethodException {

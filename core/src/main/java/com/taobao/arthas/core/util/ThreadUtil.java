@@ -6,6 +6,7 @@ import java.lang.management.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 
@@ -17,6 +18,8 @@ abstract public class ThreadUtil {
     private static final BlockingLockInfo EMPTY_INFO = new BlockingLockInfo();
 
     private static ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+
+    private static Map<Class, Map<String, Field>> fieldCache = new ConcurrentHashMap<Class, Map<String, Field>>();
 
     public static ThreadGroup getRoot() {
         ThreadGroup group = Thread.currentThread().getThreadGroup();
@@ -395,11 +398,11 @@ abstract public class ThreadUtil {
     private static void getEagleeyeTraceInfo(Thread currentThread, StringBuilder sb) {
         try {
             // access to Thread#threadlocals field
-            Field threadLocalsField = Thread.class.getDeclaredField("threadLocals");
+            Field threadLocalsField = getField(Thread.class,"threadLocals");
             threadLocalsField.setAccessible(true);
             Object threadLocalMap = threadLocalsField.get(currentThread);
             // access to ThreadLocal$ThreadLocalMap#table filed
-            Field tableFiled = threadLocalMap.getClass().getDeclaredField("table");
+            Field tableFiled = getField(threadLocalMap.getClass(),"table");
             tableFiled.setAccessible(true);
             Object[] tableEntries = (Object[])tableFiled.get(threadLocalMap);
             for (Object entry: tableEntries) {
@@ -407,7 +410,7 @@ abstract public class ThreadUtil {
                     continue;
                 }
                 // access to ThreadLocal$ThreadLocalMap$Entry#value field
-                Field valueField = entry.getClass().getDeclaredField("value");
+                Field valueField = getField(entry.getClass(),"value");
                 valueField.setAccessible(true);
                 Object threadLocalValue = valueField.get(entry);
                 if (threadLocalValue != null &&
@@ -428,6 +431,20 @@ abstract public class ThreadUtil {
         } catch (Exception e) {
            // ignore
         }
+    }
+
+    private static Field getField(Class clazz, String fieldName) throws NoSuchFieldException {
+        Map<String, Field> fieldMap = fieldCache.get(clazz);
+        if (fieldMap == null) {
+            fieldMap = new ConcurrentHashMap<String, Field>();
+            fieldCache.put(clazz, fieldMap);
+        }
+        Field threadLocalsField = fieldMap.get(fieldName);
+        if(threadLocalsField == null) {
+            threadLocalsField = clazz.getDeclaredField(fieldName);
+            fieldMap.put(fieldName, threadLocalsField);
+        }
+        return threadLocalsField;
     }
 
 }
