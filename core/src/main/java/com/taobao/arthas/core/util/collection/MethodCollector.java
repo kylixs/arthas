@@ -10,6 +10,8 @@ public class MethodCollector {
     private final Map<String, List<String>> classMethodMap = new LinkedHashMap<String, List<String>>();
 
     public void addMethod(String className, String methodName) {
+        className = toNormalClassName(className);
+        methodName = toNormalClassName(methodName);
         List<String> methods = classMethodMap.get(className);
         if(methods == null){
             methods = new ArrayList<String>();
@@ -33,6 +35,8 @@ public class MethodCollector {
     }
 
     public boolean contains(String className, String methodName) {
+        className = toNormalClassName(className);
+        methodName = toNormalClassName(methodName);
         List<String> methods = classMethodMap.get(className);
         if(methods != null){
             return methods.contains(methodName);
@@ -49,7 +53,7 @@ public class MethodCollector {
     }
 
     private boolean shouldSkipClass(boolean skipJdkClass, String className) {
-        if (skipJdkClass && (className.startsWith("java/") && !className.equals("java/lang/reflect/InvocationHandler") )) {
+        if (skipJdkClass && (className.startsWith("java.") && !className.equals("java.lang.reflect.InvocationHandler") )) {
             return true;
         }
         return false;
@@ -66,9 +70,10 @@ public class MethodCollector {
             String className = entry.getKey();
             if (shouldSkipClass(skipJdkClass, className)) continue;
             for (String methodName : entry.getValue()) {
-                if(filteredCollector==null || !(filteredCollector.contains(className, methodName) || ignoreMethodsMatcher.matching(className, methodName))){
+                if((filteredCollector==null || !filteredCollector.contains(className, methodName)) &&
+                        ( ignoreMethodsMatcher == null || !ignoreMethodsMatcher.matching(className, methodName))){
                     fullyMethodNames.add(className+":"+methodName);
-                    classNames.add(toNormalClassName(className));
+                    classNames.add(className);
                 }
             }
         }

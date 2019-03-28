@@ -11,6 +11,7 @@ import com.taobao.arthas.core.util.SearchUtils;
 import com.taobao.arthas.core.util.affect.EnhancerAffect;
 import com.taobao.arthas.core.util.collection.MethodCollector;
 import com.taobao.arthas.core.util.matcher.*;
+import com.taobao.arthas.core.view.TreeView;
 import com.taobao.middleware.cli.annotations.Argument;
 import com.taobao.middleware.cli.annotations.Description;
 import com.taobao.middleware.cli.annotations.Name;
@@ -48,11 +49,19 @@ public class TraceCommand extends EnhancerCommand {
     private boolean isRegEx = false;
     private int numberOfLimit = 100;
     private List<String> pathPatterns;
+    private AdviceListener listener;
     private boolean skipJDKTrace;
+    //enhance step by step
+    private boolean bStep;
     protected int traceDepth = 1;
     private int additionalTraceDepth = 1;
     private MethodMatcher<String> additionalMethodMatcher;
     private CollectionMatcher firstLevelEnhanceMethodNameMatcher;
+    private int lock;
+    private Instrumentation inst;
+    private EnhancerAffect effect;
+    MethodCollector globalEnhancedMethodCollector = new MethodCollector();
+    MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.traceIgnoredMethods);
 
     @Argument(argName = "class-pattern", index = 0)
     @Description("Class name pattern, use either '.' or '/' as separator")
@@ -125,6 +134,12 @@ public class TraceCommand extends EnhancerCommand {
         }
     }
 
+    @Option(shortName = "s", longName = "step", flag = true)
+    @Description("Auto trace new methods after a trace, step by step.")
+    public void setStep(boolean b) {
+        this.bStep = b;
+    }
+
     public String getClassPattern() {
         return classPattern;
     }
@@ -187,17 +202,24 @@ public class TraceCommand extends EnhancerCommand {
     }
 
     protected EnhancerAffect onEnhancerResult(CommandProcess process, int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect) throws UnmodifiableClassException {
-        MethodCollector globalEnhancedMethodCollector = new MethodCollector();
-        MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.traceIgnoredMethods);
+        this.lock = lock;
+        this.inst = inst;
+        this.listener = listener;
+        this.skipJDKTrace = skipJDKTrace;
+        this.effect = effect;
 
         //get first enhance class-methods for stack displaying
         if(firstLevelEnhanceMethodNameMatcher == null) {
             MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
             firstLevelEnhanceMethodNameMatcher = enhancedMethodCollector.getMethodNameMatcher(null, null, false);
         }
+        globalEnhancedMethodCollector.merge(effect.getEnhancedMethodCollector());
 
         int depth = 1;
-        process.write(format("Erace level:%d, %s\n", depth, effect));
+        if(traceDepth > 1 || additionalTraceDepth > 1) {
+            process.write(format("Trace depth:%d, additional enhance depth:%d\n", traceDepth, additionalTraceDepth));
+            process.write(format("Trace level:%d, %s\n", depth, effect));
+        }
         while(++depth <= traceDepth){
             if (!enhanceMethods(process,lock, inst, listener, skipJDKTrace, effect, globalEnhancedMethodCollector, ignoreMethodsMatcher)) {
                 break;
@@ -210,6 +232,7 @@ public class TraceCommand extends EnhancerCommand {
             depth = 1;
             Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
                     skipJDKTrace, additionalMethodMatcher, additionalMethodMatcher, effect);
+            globalEnhancedMethodCollector.merge(effect.getEnhancedMethodCollector());
             process.write(format("Trace additional enhance class methods:%d, %s\n", depth, effect));
             while(++depth <= additionalTraceDepth) {
                 if (!enhanceMethods(process, lock, inst, listener, skipJDKTrace, effect, globalEnhancedMethodCollector, ignoreMethodsMatcher)) {
@@ -218,13 +241,14 @@ public class TraceCommand extends EnhancerCommand {
                 process.write(format("Trace additional class methods level:%d, %s\n", depth, effect));
             }
         }
-
+        if(bStep){
+            process.write("Trace methods step by step.\n");
+        }
         return effect;
     }
 
     private boolean enhanceMethods(CommandProcess process, int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect, MethodCollector globalEnhancedMethodCollector, MethodMatcher<String> ignoreMethodsMatcher) throws UnmodifiableClassException {
-        MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
-        globalEnhancedMethodCollector.merge(enhancedMethodCollector);
+
         MethodCollector visitedMethodCollector = effect.getVisitedMethodCollector();
         CollectionMatcher newMethodNameMatcher = visitedMethodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
         visitedMethodCollector.clear();
@@ -237,6 +261,9 @@ public class TraceCommand extends EnhancerCommand {
 
         Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
                 skipJDKTrace, newMethodNameMatcher, newMethodNameMatcher, effect);
+
+        MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
+        globalEnhancedMethodCollector.merge(enhancedMethodCollector);
         return true;
     }
 
@@ -267,5 +294,38 @@ public class TraceCommand extends EnhancerCommand {
 
     protected boolean isFirstLevelEnhanceMethod(String className, String methodName){
         return firstLevelEnhanceMethodNameMatcher!=null && firstLevelEnhanceMethodNameMatcher.matching(className, methodName);
+    }
+
+    public void onTraceResult(CommandProcess process, TreeView view) {
+        try {
+            MethodCollector methodCollector = view.getMethodCollector();
+
+            //get MethodCollector before modify tree view
+            view.pretty();
+            process.write(view.draw() + "\n");
+
+            if(!bStep){
+                return ;
+            }
+
+            CollectionMatcher newMethodNameMatcher = methodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, null, true);
+            if(newMethodNameMatcher == null || newMethodNameMatcher.size() == 0){
+                return;
+            }
+            process.write(format("Visited new methods: %d\n",newMethodNameMatcher.size()));
+            if(checkEnhanceMethodLimits(process, effect.mCnt() + newMethodNameMatcher.size())){
+                return;
+            }
+            globalEnhancedMethodCollector.merge(methodCollector);
+            effect.getVisitedMethodCollector().clear();
+            Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
+                    skipJDKTrace, newMethodNameMatcher, newMethodNameMatcher, effect);
+            globalEnhancedMethodCollector.merge(effect.getEnhancedMethodCollector());
+
+            process.write(format("Enhance total methods, %s\n", effect) );
+        } catch (UnmodifiableClassException e) {
+            process.write("Enhance new methods failed: "+e.toString());
+            e.printStackTrace();
+        }
     }
 }

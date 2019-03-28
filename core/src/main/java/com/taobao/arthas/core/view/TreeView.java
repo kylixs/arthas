@@ -3,6 +3,7 @@ package com.taobao.arthas.core.view;
 import com.taobao.arthas.core.util.StringUtils;
 import com.taobao.arthas.core.util.TraceStackOptions;
 import com.taobao.arthas.core.util.TreeUtils;
+import com.taobao.arthas.core.util.collection.MethodCollector;
 
 import java.util.*;
 
@@ -44,8 +45,6 @@ public class TreeView implements View {
     @Override
     public String draw() {
 
-        pretty();
-
         final StringBuilder treeSB = new StringBuilder();
 
         final Ansi highlighted = Ansi.ansi().fg(Ansi.Color.RED);
@@ -75,7 +74,7 @@ public class TreeView implements View {
         return treeSB.toString();
     }
 
-    private void pretty() {
+    public void pretty() {
         if (TraceStackOptions.mergeNodes) {
             rebuildInvokeTree(root);
         }
@@ -83,6 +82,28 @@ public class TreeView implements View {
         findMaxCostNode(root);
 
         sortAndFilterChildrenNodes(root);
+    }
+
+    public MethodCollector getMethodCollector(){
+        MethodCollector methodCollector = new MethodCollector();
+        getAllMethods(methodCollector, root.children.get(0));
+        return methodCollector;
+    }
+
+    private static void getAllMethods(MethodCollector methodCollector, Node node) {
+        //remove last '()'
+        String methodName = node.data.substring(0, node.data.length()-2);
+        String className = methodName.substring(0, methodName.indexOf(':'));
+        methodName = methodName.substring(className.length()+1);
+        methodCollector.addMethod(className, methodName);
+
+        if(node.isLeaf()){
+            return;
+        }
+        for (int i = 0; i < node.children.size(); i++) {
+            Node childNode = node.children.get(i);
+            getAllMethods(methodCollector, childNode);
+        }
     }
 
     /**
@@ -282,6 +303,9 @@ public class TreeView implements View {
          */
         String data;
 
+//        String className;
+//        String methodName;
+
         /**
          * 子节点
          */
@@ -314,7 +338,7 @@ public class TreeView implements View {
          */
         private Node(String data) {
             this.parent = null;
-            this.data = data;
+            this.setData(data);
             this.invokeType = INVOKE_ON_BEGIN;
         }
 
@@ -326,25 +350,11 @@ public class TreeView implements View {
          */
         private Node(Node parent, String data, int invokeType) {
             this.parent = parent;
-            this.data = data;
+            this.setData(data);
             this.invokeType = invokeType;
             parent.children.add(this);
             parent.map.put(data, this);
         }
-
-//        Node copy() {
-//            Node node = new Node(data);
-//            node.invokeType = invokeType;
-//            node.beginTimestamp = beginTimestamp;
-//            node.endTimestamp = endTimestamp;
-//            node.mark = mark;
-//            node.marks = marks;
-//            node.totalCost = totalCost;
-//            node.maxCost = maxCost;
-//            node.minCost = minCost;
-//            node.times = times;
-//            return node;
-//        }
 
         void replaceChild(Node oldChildNode, Node newChildNode) {
             int i = this.children.indexOf(oldChildNode);
@@ -356,11 +366,10 @@ public class TreeView implements View {
         }
 
         void setData(String newData) {
-            if(this.parent!=null){
-                this.parent.map.remove(this.data);
-                this.parent.map.put(newData, this);
-            }
             this.data = newData;
+//            String[] vals = TreeUtils.parseNodeData(this.data);
+//            this.className = vals[0];
+//            this.methodName = vals[1];
         }
 
         /**

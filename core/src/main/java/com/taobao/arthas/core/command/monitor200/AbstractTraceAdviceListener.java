@@ -80,8 +80,11 @@ public class AbstractTraceAdviceListener extends ReflectAdviceListenerAdapter {
                     } else {
                         // TODO: concurrency issues for process.write
                         TreeView view = threadBoundEntity.get().view;
-                        process.write(view.draw() + "\n");
+                        command.onTraceResult(process, view);
+//                        view.pretty();
+//                        process.write(view.draw() + "\n");
                         process.times().incrementAndGet();
+
                     }
                 }
             } catch (Throwable e) {
