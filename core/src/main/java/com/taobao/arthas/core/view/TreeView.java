@@ -2,6 +2,7 @@ package com.taobao.arthas.core.view;
 
 import com.taobao.arthas.core.util.StringUtils;
 import com.taobao.arthas.core.util.TraceStackOptions;
+import com.taobao.arthas.core.util.TreeUtils;
 
 import java.util.*;
 
@@ -124,8 +125,13 @@ public class TreeView implements View {
         //合并重复的结点： merge onBegin to last level onInvokeBefore
         Node childNode = childrenNodes.get(0);
         if(childNode.invokeType == INVOKE_ON_BEGIN && node.invokeType == INVOKE_ON_INVOKE_BEFORE){
-            //TODO check class
-            return true;
+            //check class method is the same
+            String[] methodNames = TreeUtils.parseNodeData(node.data);
+            String[] childMethodNames = TreeUtils.parseNodeData(childNode.data);
+            if(methodNames[1].equals(childMethodNames[1])) {
+                //TODO check superclass or interface
+                return true;
+            }
         }
         return false;
     }

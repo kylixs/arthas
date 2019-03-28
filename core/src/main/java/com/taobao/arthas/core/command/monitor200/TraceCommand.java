@@ -50,7 +50,9 @@ public class TraceCommand extends EnhancerCommand {
     private List<String> pathPatterns;
     private boolean skipJDKTrace;
     protected int traceDepth = 1;
+    private int additionalTraceDepth = 1;
     private MethodMatcher<String> additionalMethodMatcher;
+    private CollectionMatcher firstLevelEnhanceMethodNameMatcher;
 
     @Argument(argName = "class-pattern", index = 0)
     @Description("Class name pattern, use either '.' or '/' as separator")
@@ -95,7 +97,7 @@ public class TraceCommand extends EnhancerCommand {
     }
 
     @Option(shortName = "d", longName = "depth")
-    @Description("set trace depth")
+    @Description("set trace depth, default is 1")
     public void setTraceDepth(int traceDepth) {
         if(traceDepth > 0 ) {
             this.traceDepth = Math.min(traceDepth, GlobalOptions.traceMaxDepth);
@@ -113,6 +115,14 @@ public class TraceCommand extends EnhancerCommand {
     @Description("set additional enhance classes list. eg. 'x.y.z.Foo;x.x.MyClass:func1;'")
     public void setAdditionalEnhanceClasses(String classes) {
         additionalMethodMatcher = OptionsUtils.parseIgnoreMethods(classes);
+    }
+
+    @Option(shortName = "ed", longName = "enhance-depth")
+    @Description("set additional enhance classes trace depth, default is 1")
+    public void setAdditionalTraceDepth(int traceDepth) {
+        if(traceDepth > 0 ) {
+            this.additionalTraceDepth = Math.min(traceDepth, GlobalOptions.traceMaxDepth);
+        }
     }
 
     public String getClassPattern() {
@@ -179,10 +189,16 @@ public class TraceCommand extends EnhancerCommand {
     protected EnhancerAffect onEnhancerResult(CommandProcess process, int lock, Instrumentation inst, AdviceListener listener, boolean skipJDKTrace, EnhancerAffect effect) throws UnmodifiableClassException {
         MethodCollector globalEnhancedMethodCollector = new MethodCollector();
         MethodMatcher<String> ignoreMethodsMatcher = OptionsUtils.parseIgnoreMethods(GlobalOptions.traceIgnoredMethods);
+
+        //get first enhance class-methods for stack displaying
+        if(firstLevelEnhanceMethodNameMatcher == null) {
+            MethodCollector enhancedMethodCollector = effect.getEnhancedMethodCollector();
+            firstLevelEnhanceMethodNameMatcher = enhancedMethodCollector.getMethodNameMatcher(null, null, false);
+        }
+
         int depth = 1;
-        int maxDepth = Math.min(this.traceDepth, 10);
         process.write(format("Erace level:%d, %s\n", depth, effect));
-        while(++depth <= maxDepth){
+        while(++depth <= traceDepth){
             if (!enhanceMethods(process,lock, inst, listener, skipJDKTrace, effect, globalEnhancedMethodCollector, ignoreMethodsMatcher)) {
                 break;
             }
@@ -195,7 +211,7 @@ public class TraceCommand extends EnhancerCommand {
             Enhancer.enhance(inst, lock, listener instanceof InvokeTraceable,
                     skipJDKTrace, additionalMethodMatcher, additionalMethodMatcher, effect);
             process.write(format("Trace additional enhance class methods:%d, %s\n", depth, effect));
-            while(++depth <= maxDepth) {
+            while(++depth <= additionalTraceDepth) {
                 if (!enhanceMethods(process, lock, inst, listener, skipJDKTrace, effect, globalEnhancedMethodCollector, ignoreMethodsMatcher)) {
                     break;
                 }
@@ -247,5 +263,9 @@ public class TraceCommand extends EnhancerCommand {
 
     private MethodMatcher getPathTracingMethodMatcher() {
         return new TrueMatcher<String>();
+    }
+
+    protected boolean isFirstLevelEnhanceMethod(String className, String methodName){
+        return firstLevelEnhanceMethodNameMatcher!=null && firstLevelEnhanceMethodNameMatcher.matching(className, methodName);
     }
 }

@@ -130,6 +130,14 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
 
             effect = onEnhancerResult(process, lock, inst, listener, skipJDKTrace, effect);
 
+            if(bExceedEnhanceMethodLimit){
+                process.write("Enhance classes/methods too much, try:\n" +
+                        "1. reduce trace depth by -d/--depth.\n" +
+                        "2. increase options enhance-method-limits.\n");
+                process.end();
+                return;
+            }
+
             // 这里做个补偿,如果在enhance期间,unLock被调用了,则补偿性放弃
             if (session.getLock() == lock) {
                 // 注册通知监听器
@@ -141,9 +149,6 @@ public abstract class EnhancerCommand extends AnnotatedCommand {
 
             process.write(effect + "\n");
 
-            if(bExceedEnhanceMethodLimit){
-                process.end();
-            }
         } catch (UnmodifiableClassException e) {
             logger.error(null, "error happens when enhancing class", e);
         } finally {

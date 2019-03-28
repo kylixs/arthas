@@ -99,23 +99,24 @@ public class AbstractTraceAdviceListener extends ReflectAdviceListenerAdapter {
      * check if the first level trace method
      * @return
      */
-    private boolean shouldIgnoreTrace() {
-//        String rootData = threadBoundEntity.get().view.getTopTraceData();
-//        String[] strs = rootData.split(":");
-//        String className = strs[0];
-//        String methodName = strs[1].replaceAll("\\(\\)", "");
-//        if (strs.length>=2 && command.getClassNameMatcher().matching(className) && command.getMethodNameMatcher().matching(methodName)){
-//            return false;
-//        }
-
-        //find the parent
-//        Class.forName(className);
-//
-
-        TreeView view = threadBoundEntity.get().view;
-        if(view.isLittleTree()) {
-           return true;
+    protected boolean shouldIgnoreTrace() {
+        String rootData = threadBoundEntity.get().view.getTopTraceData();
+        String[] strs = rootData.split(":");
+        String className = strs[0];
+        String methodName = strs[1].replaceAll("\\(\\)", "");
+        if (strs.length>=2){
+//            if(command.getClassNameMatcher().matching(className) && command.getMethodNameMatcher().matching(methodName)) {
+//                return false;
+//            }
+            if(command.isFirstLevelEnhanceMethod(className, methodName)){
+                return false;
+            }
         }
-        return false;
+
+//        TreeView view = threadBoundEntity.get().view;
+//        if(view.isLittleTree()) {
+//           return true;
+//        }
+        return true;
     }
 }
