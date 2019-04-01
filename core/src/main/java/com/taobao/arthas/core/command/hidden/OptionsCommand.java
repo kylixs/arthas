@@ -190,7 +190,7 @@ public class OptionsCommand extends AnnotatedCommand {
             }else {
                 if(optionName.equals("trace-max-depth")){
                     //limit max depth of trace command
-                    optionValue = Math.min(Integer.parseInt(optionValue), 10)+"";
+                    optionValue = Math.min(Integer.parseInt(optionValue), 20)+"";
                 }
                 afterValue = FieldUtils.setFieldValue(field, type, optionValue);
             }

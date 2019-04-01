@@ -51,10 +51,12 @@ public class TraceCommand extends EnhancerCommand {
     private List<String> pathPatterns;
     private AdviceListener listener;
     private boolean skipJDKTrace;
+    protected int maxTraceDepth = 1;
+    private int additionalTraceDepth = 1;
     //enhance step by step
     private boolean bStep;
-    protected int traceDepth = 1;
-    private int additionalTraceDepth = 1;
+    //当前trace次数
+    private int traceStep;
     private MethodMatcher<String> additionalMethodMatcher;
     private CollectionMatcher firstLevelEnhanceMethodNameMatcher;
     private int lock;
@@ -106,9 +108,9 @@ public class TraceCommand extends EnhancerCommand {
 
     @Option(shortName = "d", longName = "depth")
     @Description("set trace depth, default is 1")
-    public void setTraceDepth(int traceDepth) {
-        if(traceDepth > 0 ) {
-            this.traceDepth = Math.min(traceDepth, GlobalOptions.traceMaxDepth);
+    public void setMaxTraceDepth(int maxTraceDepth) {
+        if(maxTraceDepth > 0 ) {
+            this.maxTraceDepth = Math.min(maxTraceDepth, GlobalOptions.traceMaxDepth);
         }
     }
 
@@ -215,11 +217,12 @@ public class TraceCommand extends EnhancerCommand {
         globalEnhancedMethodCollector.merge(effect.getEnhancedMethodCollector());
 
         int depth = 1;
-        if(traceDepth > 1 || additionalTraceDepth > 1) {
-            process.write(format("Trace depth:%d, additional enhance depth:%d\n", traceDepth, additionalTraceDepth));
+        if(maxTraceDepth > 1 || additionalTraceDepth > 1) {
+            process.write(format("Max trace depth:%d, additional enhance depth:%d\n", maxTraceDepth, additionalTraceDepth));
             process.write(format("Trace level:%d, %s\n", depth, effect));
         }
-        while(++depth <= traceDepth){
+        //如果不是逐步增强，则一次性增强多级
+        while(!bStep && ++depth <= maxTraceDepth){
             if (!enhanceMethods(process,lock, inst, listener, skipJDKTrace, effect, globalEnhancedMethodCollector, ignoreMethodsMatcher)) {
                 break;
             }
@@ -233,7 +236,8 @@ public class TraceCommand extends EnhancerCommand {
                     skipJDKTrace, additionalMethodMatcher, additionalMethodMatcher, ignoreMethodsMatcher, effect);
             globalEnhancedMethodCollector.merge(effect.getEnhancedMethodCollector());
             process.write(format("Trace additional enhance class methods:%d, %s\n", depth, effect));
-            while(++depth <= additionalTraceDepth) {
+            //如果不是逐步增强，则一次性增强多级
+            while(!bStep && ++depth <= additionalTraceDepth) {
                 if (!enhanceMethods(process, lock, inst, listener, skipJDKTrace, effect, globalEnhancedMethodCollector, ignoreMethodsMatcher)) {
                     break;
                 }
@@ -306,6 +310,11 @@ public class TraceCommand extends EnhancerCommand {
             if(!bStep){
                 return ;
             }
+            if(traceStep >= GlobalOptions.traceMaxDepth){
+                process.write("Exceed max trace depth:"+traceStep+"\n");
+                return;
+            }
+            traceStep++;
 
             CollectionMatcher newMethodNameMatcher = methodCollector.getMethodNameMatcher(globalEnhancedMethodCollector, ignoreMethodsMatcher, true);
             if(newMethodNameMatcher == null || newMethodNameMatcher.size() == 0){
