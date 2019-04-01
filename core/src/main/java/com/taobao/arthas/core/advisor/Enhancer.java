@@ -239,6 +239,14 @@ public class Enhancer implements ClassFileTransformer {
      * 是否过滤Arthas加载的类
      */
     private static boolean isSelf(Class<?> clazz) {
+        if(GlobalOptions.isSuper){
+            String clazzName = clazz.getName();
+            //排除 AdviceWeaver等会插入到修改代码中的类，避免死循环
+            if(clazzName.startsWith("com.taobao.arthas.core.advisor") && !clazzName.equals("com.taobao.arthas.core.advisor.Enhancer")){
+                return true;
+            }
+            return false;
+        }
         return null != clazz
                 && isEquals(clazz.getClassLoader(), Enhancer.class.getClassLoader());
     }
