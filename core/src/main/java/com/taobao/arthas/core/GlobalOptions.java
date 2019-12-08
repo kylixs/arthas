@@ -139,7 +139,7 @@ public class GlobalOptions {
                     "top-size=5: filter sub nodes by top size. \n"+
                     "You can set partial attribute value by 'options trace-stack-pretty min-cost=0.5'. \n"
     )
-    public static volatile String traceStackPretty = "merge-nodes=true;decorate-proxy=true;top-size=5;min-cost=1;";
+    public static volatile String traceStackPretty = "merge-nodes=true;decorate-proxy=true;top-size=200;min-cost=0;";
 
     /**
      * trace方法深度
